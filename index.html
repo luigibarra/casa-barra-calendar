@@ -408,8 +408,8 @@
                 <div class="flex items-center gap-2.5">
                     <span class="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xl">⚙️</span>
                     <div>
-                        <h3 class="font-display font-bold text-xl text-slate-900">Motore Cloud & Telegram</h3>
-                        <p class="text-xs text-slate-500">Configura la sincronizzazione Dropbox e il Maggiordomo Telegram</p>
+                        <h3 class="font-display font-bold text-xl text-slate-900">Motore Cloud "Zero Pensieri" & Telegram</h3>
+                        <p class="text-xs text-slate-500">Configura una sola volta e condividi con Vale e Leo con un link magico</p>
                     </div>
                 </div>
                 <button onclick="closeSettingsModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
@@ -417,22 +417,73 @@
                 </button>
             </div>
 
-            <!-- SEZIONE 1: DROPBOX CLOUD SYNC -->
+            <!-- SEZIONE 1: DROPBOX CLOUD SYNC "ZERO PENSIERI" (REFRESH TOKEN ETERNO) -->
             <div class="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-4 space-y-3">
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between flex-wrap gap-1">
                     <h4 class="font-display font-bold text-sm text-blue-950 flex items-center gap-2">
                         <i class="ph-fill ph-dropbox-logo text-blue-600 text-xl"></i>
-                        1. Sincronizzazione Dropbox JSON
+                        1. Dropbox "Zero Pensieri" (Senza Scadenza)
                     </h4>
-                    <span class="text-[11px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">/calendar_barra.json</span>
+                    <span class="text-[11px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md border border-emerald-300">Auto-Refresh Attivo</span>
                 </div>
                 <p class="text-xs text-blue-900/80 leading-relaxed">
-                    Inserisci il tuo Access Token Dropbox per leggere e salvare automaticamente gli impegni della famiglia sul file condiviso. Se lasciato vuoto, l'app funziona in memoria locale.
+                    Usando <b>App Key</b>, <b>App Secret</b> e <b>Refresh Token</b>, la Web App rinnova da sola il permesso ogni 4 ore in background: non dovrete <b>mai più</b> rifare il login!
                 </p>
-                <div>
-                    <label class="block text-[11px] font-bold uppercase text-blue-900 mb-1">Dropbox Access Token</label>
-                    <input type="password" id="cfgDropboxToken" placeholder="sl.Bxx..." class="w-full h-10 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+
+                <!-- Campi Principali Dropbox -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-blue-900 mb-1">Dropbox App Key</label>
+                        <input type="text" id="cfgDropboxAppKey" placeholder="Es. a1b2c3d4e5..." class="w-full h-9 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-blue-900 mb-1">Dropbox App Secret</label>
+                        <input type="password" id="cfgDropboxAppSecret" placeholder="Es. x9y8z7w6..." class="w-full h-9 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                    </div>
                 </div>
+
+                <!-- Procedura Guidata 1-Click per ottenere il Refresh Token -->
+                <div class="bg-white/90 border border-blue-200 rounded-xl p-3 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-bold text-blue-950 flex items-center gap-1">
+                            🪄 Generatore Guidato Refresh Token (Fallo solo la 1ª volta)
+                        </span>
+                    </div>
+                    <ol class="text-[11px] text-slate-600 space-y-1 list-decimal list-inside">
+                        <li>Inserisci qui sopra <b>App Key</b> e <b>App Secret</b> (dalla tua console Dropbox).</li>
+                        <li>Clicca il pulsante blu qui sotto per aprire Dropbox e copia il codice che ti mostra.</li>
+                        <li>Incolla il codice nella casella e premi <b>Converti in Token Eterno</b>.</li>
+                    </ol>
+                    <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                        <button type="button" onclick="openDropboxAuthCodePage()" class="tactile-btn bg-blue-100 hover:bg-blue-200 text-blue-900 text-xs font-bold px-3 py-2 rounded-xl flex items-center justify-center gap-1.5 shrink-0">
+                            <i class="ph-bold ph-arrow-square-out"></i> 1. Ottieni Codice su Dropbox
+                        </button>
+                        <input type="text" id="dropboxAuthCodeInput" placeholder="Incolla qui il codice temporaneo..." class="flex-1 h-9 px-3 rounded-xl border border-slate-300 bg-slate-50 text-xs font-mono">
+                        <button type="button" onclick="exchangeAuthCodeForRefreshToken()" class="tactile-btn bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-xl shrink-0">
+                            ⚡ 2. Converti in Token Eterno
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <div class="sm:col-span-2">
+                        <label class="block text-[10px] font-bold uppercase text-blue-900 mb-1">Refresh Token Eterno (Auto-compilato o incollato)</label>
+                        <input type="password" id="cfgDropboxRefreshToken" placeholder="Incolla o genera con il pulsante sopra..." class="w-full h-9 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-blue-900 mb-1">Percorso File JSON</label>
+                        <input type="text" id="cfgDropboxFilePath" value="/casa_barra_calendar.json" class="w-full h-9 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                    </div>
+                </div>
+
+                <!-- Fallback opzionale Access Token vecchio stile -->
+                <details class="text-[11px] text-blue-800/80 pt-1">
+                    <summary class="cursor-pointer font-semibold hover:underline">Opzionale: usa Access Token temporaneo (4 ore) invece del Refresh Token</summary>
+                    <div class="mt-2">
+                        <input type="password" id="cfgDropboxToken" placeholder="sl.Bxx... (Solo se non usi Refresh Token)" class="w-full h-9 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                    </div>
+                </details>
+
                 <div class="flex flex-wrap gap-2 pt-1">
                     <button type="button" onclick="saveCloudConfig(); syncFromDropbox(true);" class="tactile-btn bg-blue-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
                         <i class="ph-bold ph-cloud-arrow-down"></i> Scarica da Dropbox
@@ -491,6 +542,24 @@
                         Ripristina Demo
                     </button>
                 </div>
+            </div>
+
+            <!-- SEZIONE 3: LINK MAGICO PER CONFIGURARE I TELEFONI DI VALE E LEO IN 1 TAP -->
+            <div class="bg-amber-50/90 border-2 border-amber-300 rounded-2xl p-4 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-display font-bold text-sm text-amber-950 flex items-center gap-2">
+                        <span class="text-lg">🪄</span>
+                        3. Link Magico per i telefoni di Vale e Leo
+                    </h4>
+                    <span class="text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md">Zero Codici da Copiare</span>
+                </div>
+                <p class="text-xs text-amber-900/80 leading-relaxed">
+                    Una volta configurato Dropbox e Telegram sul tuo telefono, premi questo bottone: copierà un <b>Link Magico</b> da mandare a Vale o Leo. Appena lo aprono, il loro telefono salva automaticamente tutte le chiavi ed è subito sincronizzato!
+                </p>
+                <button type="button" onclick="saveCloudConfig(); copyMagicSetupLink();" class="tactile-btn w-full bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 font-display font-bold text-xs py-2.5 px-4 rounded-xl flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-link text-base"></i>
+                    📲 Copia Link Magico di Configurazione per la Famiglia
+                </button>
             </div>
 
             <div class="flex justify-end pt-2">
@@ -865,6 +934,7 @@
 
         // --- 4. INIZIALIZZAZIONE ---
         window.addEventListener('DOMContentLoaded', () => {
+            checkMagicSetupLinkInUrl();
             initTelegramWebAppIntegration();
             setActiveAuthor(activeAuthor);
             loadLocalData();
@@ -874,9 +944,9 @@
             renderMemberFilterBar();
             renderAll();
 
-            // Se c'è un token Dropbox salvato, sincronizza silenziosamente all'avvio
+            // Se c'è una configurazione Dropbox (Refresh Token o Access Token), sincronizza subito all'avvio
             const cfg = getCloudConfig();
-            if (cfg.dropboxToken) {
+            if ( isDropboxConfigured(cfg) ) {
                 syncFromDropbox(false);
             }
         });
@@ -1607,7 +1677,10 @@
             showToast('🗑️ Impegno rimosso dal calendario');
         }
 
-        // --- 9. PERSISTENZA LOCALE + DROPBOX CLOUD SYNC ---
+        // --- 9. PERSISTENZA LOCALE + DROPBOX CLOUD SYNC "ZERO PENSIERI" (OAUTH2 REFRESH TOKEN) ---
+        let cachedDropboxAccessToken = '';
+        let cachedDropboxTokenExpiry = 0;
+
         function loadLocalData() {
             try {
                 const raw = localStorage.getItem(STORAGE_KEY_DB);
@@ -1630,18 +1703,39 @@
 
         function getCloudConfig() {
             try {
-                return JSON.parse(localStorage.getItem(STORAGE_KEY_CFG)) || {
+                const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY_CFG)) || {};
+                return {
+                    dropboxAppKey: parsed.dropboxAppKey || '',
+                    dropboxAppSecret: parsed.dropboxAppSecret || '',
+                    dropboxRefreshToken: parsed.dropboxRefreshToken || '',
+                    dropboxFilePath: parsed.dropboxFilePath || '/casa_barra_calendar.json',
+                    dropboxToken: parsed.dropboxToken || '',
+                    telegramToken: parsed.telegramToken || '',
+                    telegramChatId: parsed.telegramChatId || ''
+                };
+            } catch {
+                return {
+                    dropboxAppKey: '',
+                    dropboxAppSecret: '',
+                    dropboxRefreshToken: '',
+                    dropboxFilePath: '/casa_barra_calendar.json',
                     dropboxToken: '',
                     telegramToken: '',
                     telegramChatId: ''
                 };
-            } catch {
-                return { dropboxToken: '', telegramToken: '', telegramChatId: '' };
             }
+        }
+
+        function isDropboxConfigured(cfg = getCloudConfig()) {
+            return Boolean((cfg.dropboxAppKey && cfg.dropboxAppSecret && cfg.dropboxRefreshToken) || cfg.dropboxToken);
         }
 
         function loadCloudConfigToInputs() {
             const cfg = getCloudConfig();
+            document.getElementById('cfgDropboxAppKey').value = cfg.dropboxAppKey || '';
+            document.getElementById('cfgDropboxAppSecret').value = cfg.dropboxAppSecret || '';
+            document.getElementById('cfgDropboxRefreshToken').value = cfg.dropboxRefreshToken || '';
+            document.getElementById('cfgDropboxFilePath').value = cfg.dropboxFilePath || '/casa_barra_calendar.json';
             document.getElementById('cfgDropboxToken').value = cfg.dropboxToken || '';
             document.getElementById('cfgTelegramToken').value = cfg.telegramToken || '';
             document.getElementById('cfgTelegramChatId').value = cfg.telegramChatId || '';
@@ -1649,7 +1743,14 @@
         }
 
         function saveCloudConfig() {
+            let filePath = (document.getElementById('cfgDropboxFilePath').value || '/casa_barra_calendar.json').trim();
+            if (!filePath.startsWith('/')) filePath = '/' + filePath;
+
             const cfg = {
+                dropboxAppKey: document.getElementById('cfgDropboxAppKey').value.trim(),
+                dropboxAppSecret: document.getElementById('cfgDropboxAppSecret').value.trim(),
+                dropboxRefreshToken: document.getElementById('cfgDropboxRefreshToken').value.trim(),
+                dropboxFilePath: filePath,
                 dropboxToken: document.getElementById('cfgDropboxToken').value.trim(),
                 telegramToken: document.getElementById('cfgTelegramToken').value.trim(),
                 telegramChatId: document.getElementById('cfgTelegramChatId').value.trim()
@@ -1664,7 +1765,9 @@
             const badgeText = document.getElementById('syncStatusText');
             const tgDot = document.getElementById('telegramConfiguredDot');
 
-            if (cfg.dropboxToken) {
+            if (cfg.dropboxAppKey && cfg.dropboxAppSecret && cfg.dropboxRefreshToken) {
+                badgeText.textContent = 'Dropbox Eterno';
+            } else if (cfg.dropboxToken) {
                 badgeText.textContent = 'Dropbox Attivo';
             } else {
                 badgeText.textContent = 'Memoria Locale';
@@ -1677,9 +1780,144 @@
             }
         }
 
+        // Passo 1 Generatore Guidato: Apre pagina Dropbox per ottenere il codice offline
+        function openDropboxAuthCodePage() {
+            const appKey = document.getElementById('cfgDropboxAppKey').value.trim();
+            if (!appKey) {
+                showToast('⚠️ Inserisci prima la Dropbox App Key nella casella qui sopra!');
+                document.getElementById('cfgDropboxAppKey').focus();
+                return;
+            }
+            const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${encodeURIComponent(appKey)}&token_access_type=offline&response_type=code`;
+            window.open(authUrl, '_blank', 'noopener,noreferrer');
+            showToast('🔑 Autorizza su Dropbox e incolla il codice ottenuto nella casella!');
+        }
+
+        // Passo 2 Generatore Guidato: Scambia il codice con un Refresh Token Eterno
+        async function exchangeAuthCodeForRefreshToken() {
+            const appKey = document.getElementById('cfgDropboxAppKey').value.trim();
+            const appSecret = document.getElementById('cfgDropboxAppSecret').value.trim();
+            const authCode = document.getElementById('dropboxAuthCodeInput').value.trim();
+
+            if (!appKey || !appSecret || !authCode) {
+                showToast('⚠️ Compila App Key, App Secret e il Codice temporaneo ottenuto da Dropbox!');
+                return;
+            }
+
+            try {
+                const bodyParams = new URLSearchParams({
+                    code: authCode,
+                    grant_type: 'authorization_code',
+                    client_id: appKey,
+                    client_secret: appSecret
+                });
+
+                const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: bodyParams.toString()
+                });
+
+                const data = await res.json();
+                if (res.ok && data.refresh_token) {
+                    document.getElementById('cfgDropboxRefreshToken').value = data.refresh_token;
+                    document.getElementById('dropboxAuthCodeInput').value = '';
+                    cachedDropboxAccessToken = data.access_token || '';
+                    cachedDropboxTokenExpiry = Date.now() + ((data.expires_in || 14000) - 300) * 1000;
+                    saveCloudConfig();
+                    showToast('🎉 Refresh Token Eterno generato e salvato! Sincronizzo subito...');
+                    await syncToDropbox(true);
+                } else {
+                    showToast(`⚠️ Errore Dropbox: ${data.error_description || data.error || 'Codice non valido o scaduto'}`);
+                }
+            } catch (err) {
+                showToast('⚠️ Errore di rete durante la conversione del codice Dropbox');
+            }
+        }
+
+        // Ottiene automaticamente un Access Token fresco usando il Refresh Token Eterno
+        async function getValidDropboxAccessToken(forceRefresh = false) {
+            const cfg = getCloudConfig();
+
+            // Se abbiamo il Refresh Token Eterno configurato:
+            if (cfg.dropboxAppKey && cfg.dropboxAppSecret && cfg.dropboxRefreshToken) {
+                if (!forceRefresh && cachedDropboxAccessToken && Date.now() < cachedDropboxTokenExpiry) {
+                    return cachedDropboxAccessToken;
+                }
+
+                const bodyParams = new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    refresh_token: cfg.dropboxRefreshToken,
+                    client_id: cfg.dropboxAppKey,
+                    client_secret: cfg.dropboxAppSecret
+                });
+
+                const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: bodyParams.toString()
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    cachedDropboxAccessToken = data.access_token;
+                    cachedDropboxTokenExpiry = Date.now() + ((data.expires_in || 14000) - 300) * 1000;
+                    return cachedDropboxAccessToken;
+                } else {
+                    throw new Error('Refresh token non valido');
+                }
+            }
+
+            // Fallback su token manuale
+            return cfg.dropboxToken || '';
+        }
+
+        // Link Magico per configurare i telefoni di Vale e Leo con 1 tap
+        function copyMagicSetupLink() {
+            const cfg = getCloudConfig();
+            if (!isDropboxConfigured(cfg) && !cfg.telegramToken) {
+                showToast('⚠️ Configura prima Dropbox o Telegram per generare il Link Magico!');
+                return;
+            }
+            const jsonStr = JSON.stringify(cfg);
+            const encoded = btoa(unescape(encodeURIComponent(jsonStr)));
+            const baseUrl = window.location.origin + window.location.pathname;
+            const magicUrl = `${baseUrl}?setup=${encodeURIComponent(encoded)}`;
+
+            const tempInput = document.createElement('textarea');
+            tempInput.value = magicUrl;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('🪄 Link Magico copiato negli appunti! Incollalo su WhatsApp o Telegram a Vale e Leo.');
+        }
+
+        function checkMagicSetupLinkInUrl() {
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const setupParam = params.get('setup');
+                if (!setupParam) return;
+
+                const decodedJson = decodeURIComponent(escape(atob(setupParam)));
+                const importedCfg = JSON.parse(decodedJson);
+                if (importedCfg && typeof importedCfg === 'object') {
+                    localStorage.setItem(STORAGE_KEY_CFG, JSON.stringify(importedCfg));
+                    // Pulisce la barra degli indirizzi per sicurezza
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    setTimeout(() => {
+                        showToast('🎉 Telefono configurato automaticamente con il Link Magico di Casa Barra!');
+                    }, 400);
+                }
+            } catch (e) {
+                console.warn('Link magico non valido:', e);
+            }
+        }
+
         async function syncFromDropbox(showFeedback = true) {
             const cfg = getCloudConfig();
-            if (!cfg.dropboxToken) {
+            if (!isDropboxConfigured(cfg)) {
                 if (showFeedback) openSettingsModal();
                 return;
             }
@@ -1688,11 +1926,14 @@
             badgeText.textContent = 'Sync...';
 
             try {
+                const accessToken = await getValidDropboxAccessToken(false);
+                const filePath = cfg.dropboxFilePath || '/casa_barra_calendar.json';
+
                 const res = await fetch('https://content.dropboxapi.com/2/files/download', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${cfg.dropboxToken}`,
-                        'Dropbox-API-Arg': JSON.stringify({ path: '/calendar_barra.json' })
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({ path: filePath })
                     }
                 });
 
@@ -1703,14 +1944,18 @@
                         localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(appData));
                         renderAll();
                         badgeText.textContent = 'Dropbox OK';
-                        if (showFeedback) showToast('☁️ Calendario scaricato da Dropbox!');
+                        if (showFeedback) showToast('☁️ Calendario aggiornato da Dropbox!');
                     }
                 } else if (res.status === 409) {
                     // Il file non esiste ancora su Dropbox: creiamolo subito!
                     await syncToDropbox(showFeedback);
+                } else if (res.status === 401) {
+                    // Token scaduto, forziamo il refresh e riproviamo
+                    const freshToken = await getValidDropboxAccessToken(true);
+                    if (freshToken) await syncFromDropbox(showFeedback);
                 } else {
                     badgeText.textContent = 'Errore Sync';
-                    if (showFeedback) showToast('⚠️ Controlla il Token Dropbox nelle impostazioni');
+                    if (showFeedback) showToast('⚠️ Controlla i dati Dropbox nelle impostazioni');
                 }
             } catch (err) {
                 badgeText.textContent = 'Offline';
@@ -1720,19 +1965,22 @@
 
         async function syncToDropbox(showFeedback = false) {
             const cfg = getCloudConfig();
-            if (!cfg.dropboxToken) return;
+            if (!isDropboxConfigured(cfg)) return;
 
             const badgeText = document.getElementById('syncStatusText');
             badgeText.textContent = 'Salvataggio...';
 
             try {
+                const accessToken = await getValidDropboxAccessToken(false);
+                const filePath = cfg.dropboxFilePath || '/casa_barra_calendar.json';
+
                 const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${cfg.dropboxToken}`,
+                        'Authorization': `Bearer ${accessToken}`,
                         'Content-Type': 'application/octet-stream',
                         'Dropbox-API-Arg': JSON.stringify({
-                            path: '/calendar_barra.json',
+                            path: filePath,
                             mode: 'overwrite',
                             autorename: false,
                             mute: true
@@ -1743,7 +1991,7 @@
 
                 if (res.ok) {
                     badgeText.textContent = 'Dropbox OK';
-                    if (showFeedback) showToast('☁️ Salvato su Dropbox (/calendar_barra.json)!');
+                    if (showFeedback) showToast(`☁️ Salvato su Dropbox (${filePath})!`);
                 } else {
                     badgeText.textContent = 'Errore Upload';
                     if (showFeedback) showToast('⚠️ Errore durante upload su Dropbox');
