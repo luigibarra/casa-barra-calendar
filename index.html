@@ -1,0 +1,1942 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Casa Barra • Calendario di Famiglia</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka (playful headers) & Plus Jakarta Sans (clean body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Telegram WebApp SDK (opzionale se aperto dentro Telegram) -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Fredoka', 'sans-serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        cream: '#FFFDF9',
+                        luigi: { DEFAULT: '#3B82F6', light: '#DBEAFE', border: '#93C5FD' },
+                        vale: { DEFAULT: '#EC4899', light: '#FCE7F3', border: '#F9A8D4' },
+                        leo: { DEFAULT: '#10B981', light: '#D1FAE5', border: '#6EE7B7' },
+                        kiki: { DEFAULT: '#F59E0B', light: '#FEF3C7', border: '#FCD34D' },
+                        tutti: { DEFAULT: '#8B5CF6', light: '#EDE9FE', border: '#C4B5FD' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #FFF9F2;
+            background-image: 
+                radial-gradient(at 10% 10%, rgba(254, 243, 199, 0.7) 0px, transparent 50%),
+                radial-gradient(at 90% 15%, rgba(252, 231, 243, 0.6) 0px, transparent 50%),
+                radial-gradient(at 50% 90%, rgba(219, 234, 254, 0.6) 0px, transparent 50%);
+            background-attachment: fixed;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Stile giocoso con bordo tattile stile fumetto/sticker */
+        .tactile-card {
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            border: 2px solid #F1ECE1;
+            box-shadow: 0 6px 0 #E6DFD3, 0 10px 20px rgba(0,0,0,0.03);
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .tactile-btn {
+            border: 2px solid rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .tactile-btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+        }
+
+        /* Nascondi scrollbar per caroselli orizzontali */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        @keyframes popIn {
+            0% { opacity: 0; transform: scale(0.92) translateY(8px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-pop {
+            animation: popIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+    </style>
+</head>
+<body class="font-sans text-slate-800 min-h-screen pb-28 selection:bg-amber-200">
+
+    <!-- BARRA SUPERIORE & STATO SYNC -->
+    <header class="sticky top-0 z-30 bg-[#FFF9F2]/90 backdrop-blur-md border-b border-amber-200/60 px-4 py-3">
+        <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
+            <!-- Logo & Titolo -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-400 to-pink-500 flex items-center justify-center text-white shadow-md rotate-[-3deg]">
+                    <span class="text-2xl">🏡</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-display font-bold text-xl sm:text-2xl text-slate-900 tracking-tight leading-none">
+                            Casa Barra
+                        </h1>
+                        <span id="syncStatusBadge" onclick="syncFromDropbox(true)" class="cursor-pointer inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200" title="Stato sincronizzazione">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="syncStatusText">Locale</span>
+                        </span>
+                    </div>
+                    <p id="currentDateHeader" class="text-xs font-medium text-slate-500 mt-0.5">Caricamento data...</p>
+                </div>
+            </div>
+
+            <!-- Azioni Destra: Chi sta usando l'app + Impostazioni -->
+            <div class="flex items-center gap-2">
+                <!-- Selettore Utente Attivo (Chi scrive su Telegram) -->
+                <button onclick="cycleActiveAuthor()" id="activeAuthorBtn" class="tactile-btn flex items-center gap-2 bg-white px-2.5 py-1.5 rounded-2xl text-xs font-bold text-slate-700 hover:bg-amber-50/60" title="Chi sta usando l'app in questo momento?">
+                    <span class="text-[10px] uppercase tracking-wider text-slate-400 hidden sm:inline">Sono:</span>
+                    <span id="activeAuthorAvatar" class="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center shrink-0"></span>
+                    <span id="activeAuthorName">Luigi</span>
+                    <i class="ph-bold ph-caret-down text-slate-400 text-xs"></i>
+                </button>
+
+                <!-- Bottone Impostazioni (Dropbox & Telegram) -->
+                <button onclick="openSettingsModal()" class="tactile-btn w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-slate-700 hover:text-amber-600 relative" title="Configura Dropbox e Telegram">
+                    <i class="ph-fill ph-gear-six text-xl"></i>
+                    <span id="telegramConfiguredDot" class="hidden absolute -top-1 -right-1 w-3 h-3 bg-sky-500 border-2 border-white rounded-full"></span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- CONTENITORE PRINCIPALE -->
+    <main class="max-w-3xl mx-auto px-4 pt-4 space-y-5">
+
+        <!-- 1. STRISCIA COUNTDOWN EVENTI SPECIALI (MILESTONES) -->
+        <section id="milestonesStrip" class="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-1">
+            <!-- Popolato via JS -->
+        </section>
+
+        <!-- 2. FILTRO MEMBRI DELLA FAMIGLIA (AVATAR BAR) -->
+        <section class="tactile-card rounded-3xl p-3">
+            <div class="flex items-center justify-between mb-2 px-1">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                    <i class="ph-fill ph-users-three text-amber-500 text-sm"></i> Filtra per chi:
+                </span>
+                <span id="activeFilterLabel" class="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-0.5 rounded-lg">
+                    Tutti gli impegni
+                </span>
+            </div>
+            <div id="memberFilterBar" class="grid grid-cols-6 gap-1.5 sm:gap-2.5">
+                <!-- Popolato dinamicamente via JS -->
+            </div>
+        </section>
+
+        <!-- 3. BOTTONI RAPIDI ("BIG BUTTONS" ZERO-FRICTION) -->
+        <section>
+            <div class="flex items-center justify-between mb-2 px-1">
+                <h2 class="font-display font-semibold text-base text-slate-800 flex items-center gap-1.5">
+                    <span class="text-lg">⚡</span> Aggiunta lampo in 1 tap
+                </h2>
+                <button onclick="openEventModal()" class="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 bg-amber-100/80 px-2.5 py-1 rounded-xl">
+                    <i class="ph-bold ph-plus"></i> Evento libero
+                </button>
+            </div>
+            <div id="quickTemplatesGrid" class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+                <!-- Popolato via JS con i 6 bottoni giocosi -->
+            </div>
+        </section>
+
+        <!-- 4. SWITCHER VISTA: OGGI & PROSSIMI vs CALENDARIO MENSILE -->
+        <section class="flex items-center justify-between gap-2 bg-amber-100/70 p-1.5 rounded-2xl border border-amber-200/80">
+            <button id="tabTimelineBtn" onclick="switchView('timeline')" class="flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm">
+                <i class="ph-fill ph-calendar-check text-amber-500 text-lg"></i>
+                Oggi & Prossimi
+            </button>
+            <button id="tabMonthBtn" onclick="switchView('month')" class="flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900">
+                <i class="ph-fill ph-squares-four text-violet-500 text-lg"></i>
+                Vista Mese
+            </button>
+        </section>
+
+        <!-- 5A. VISTA TIMELINE ("OGGI & PROSSIMI") -->
+        <section id="timelineViewContainer" class="space-y-6">
+            <!-- Banner Prossimo Evento Imminente -->
+            <div id="nextUpBanner" class="hidden"></div>
+
+            <!-- Lista Giorni e Card Eventi -->
+            <div id="timelineDaysList" class="space-y-6"></div>
+        </section>
+
+        <!-- 5B. VISTA MENSILE A PALLINI COLORATI -->
+        <section id="monthViewContainer" class="hidden space-y-4">
+            <div class="tactile-card rounded-3xl p-4">
+                <!-- Navigazione Mese -->
+                <div class="flex items-center justify-between mb-4">
+                    <button onclick="changeMonth(-1)" class="tactile-btn w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-slate-700 hover:bg-amber-100">
+                        <i class="ph-bold ph-caret-left text-lg"></i>
+                    </button>
+                    <div class="text-center">
+                        <h3 id="monthGridTitle" class="font-display font-bold text-xl text-slate-900 capitalize">Ottobre 2026</h3>
+                        <button onclick="goToTodayMonth()" class="text-xs font-semibold text-amber-600 hover:underline">Torna a oggi</button>
+                    </div>
+                    <button onclick="changeMonth(1)" class="tactile-btn w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-slate-700 hover:bg-amber-100">
+                        <i class="ph-bold ph-caret-right text-lg"></i>
+                    </button>
+                </div>
+
+                <!-- Intestazione Giorni Settimana -->
+                <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase text-slate-400 mb-2">
+                    <div>Lun</div><div>Mar</div><div>Mer</div><div>Gio</div><div>Ven</div><div class="text-amber-600">Sab</div><div class="text-rose-500">Dom</div>
+                </div>
+
+                <!-- Griglia Giorni -->
+                <div id="monthDaysGrid" class="grid grid-cols-7 gap-1.5">
+                    <!-- Popolato via JS -->
+                </div>
+            </div>
+
+            <!-- Dettaglio Giorno Selezionato nel Mese -->
+            <div id="selectedMonthDayDetails" class="space-y-3"></div>
+        </section>
+
+    </main>
+
+    <!-- FLOATING ACTION BUTTON (FAB) IN BASSO -->
+    <div class="fixed bottom-5 inset-x-0 z-20 pointer-events-none flex justify-center px-4">
+        <div class="bg-slate-900/95 backdrop-blur-md text-white p-1.5 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2 pointer-events-auto">
+            <button onclick="openEventModal()" class="tactile-btn bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-display font-bold text-sm px-5 py-2.5 rounded-full flex items-center gap-2">
+                <i class="ph-bold ph-plus-circle text-lg"></i>
+                Nuovo Impegno
+            </button>
+            <button onclick="sendMorningBriefingToTelegram()" class="px-3.5 py-2.5 rounded-full text-xs font-bold text-sky-300 hover:bg-slate-800 flex items-center gap-1.5 transition" title="Invia riepilogo della giornata su Telegram">
+                <i class="ph-fill ph-paper-plane-tilt text-base text-sky-400"></i>
+                <span class="hidden sm:inline">Invia programma oggi</span>
+                <span class="sm:hidden">Telegram</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODALE AGGIUNGI / MODIFICA EVENTO
+         ========================================== -->
+    <div id="eventModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto">
+        <div class="bg-[#FFFDF9] w-full max-w-lg rounded-t-3xl sm:rounded-3xl border-2 border-amber-200 shadow-2xl p-5 max-h-[92vh] overflow-y-auto animate-pop">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div class="flex items-center gap-2">
+                    <span id="modalEmojiPreview" class="text-2xl bg-amber-100 w-10 h-10 rounded-2xl flex items-center justify-center">📅</span>
+                    <h3 id="modalTitleHeader" class="font-display font-bold text-xl text-slate-900">Nuovo Impegno</h3>
+                </div>
+                <button onclick="closeEventModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <form id="eventForm" onsubmit="saveEventFromForm(event)" class="space-y-4 mt-4">
+                <input type="hidden" id="evtId">
+
+                <!-- Scelta Emoji & Titolo -->
+                <div class="flex gap-2">
+                    <div class="w-20">
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Icona</label>
+                        <select id="evtIcon" onchange="document.getElementById('modalEmojiPreview').textContent = this.value" class="w-full h-11 rounded-2xl border-2 border-slate-200 bg-white text-center text-xl focus:border-amber-400 focus:outline-none">
+                            <option value="⚽">⚽</option>
+                            <option value="🎂">🎂</option>
+                            <option value="🩺">🩺</option>
+                            <option value="🦷">🦷</option>
+                            <option value="🍕">🍕</option>
+                            <option value="📚">📚</option>
+                            <option value="🛒">🛒</option>
+                            <option value="🎃">🎃</option>
+                            <option value="🏊">🏊</option>
+                            <option value="🎸">🎸</option>
+                            <option value="✈️">✈️</option>
+                            <option value="🐾">🐾</option>
+                            <option value="🎉">🎉</option>
+                            <option value="📅">📅</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Cosa c'è da fare? *</label>
+                        <input type="text" id="evtTitle" required placeholder="Es. Allenamento Leo, Dentista, Cena..." class="w-full h-11 px-3.5 rounded-2xl border-2 border-slate-200 bg-white font-semibold text-slate-800 focus:border-amber-400 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- Chi partecipa? (Multi-select giocoso) -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">Chi riguarda? (Tocca uno o più)</label>
+                    <div id="modalMembersSelector" class="grid grid-cols-5 gap-2">
+                        <!-- Popolato via JS -->
+                    </div>
+                </div>
+
+                <!-- Data e Orari -->
+                <div class="grid grid-cols-3 gap-2.5">
+                    <div class="col-span-3 sm:col-span-1">
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Giorno *</label>
+                        <input type="date" id="evtDate" required class="w-full h-11 px-3 rounded-2xl border-2 border-slate-200 bg-white font-semibold text-sm focus:border-amber-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Inizio</label>
+                        <input type="time" id="evtStart" required class="w-full h-11 px-3 rounded-2xl border-2 border-slate-200 bg-white font-semibold text-sm focus:border-amber-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Fine</label>
+                        <input type="time" id="evtEnd" class="w-full h-11 px-3 rounded-2xl border-2 border-slate-200 bg-white font-semibold text-sm focus:border-amber-400 focus:outline-none">
+                    </div>
+                </div>
+
+                <!-- BOX LOGISTICA TAXI: CHI PORTA & CHI RIPRENDE -->
+                <div class="bg-amber-50/90 border-2 border-amber-200/80 rounded-2xl p-3 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                            <span class="text-base">🚕</span> Servizio Taxi Famiglia (Opzionale)
+                        </span>
+                        <span class="text-[11px] text-amber-700">Chi accompagna?</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">🚗 Andata (Porta)</label>
+                            <select id="evtDriverTo" class="w-full h-9 px-2.5 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-700">
+                                <option value="">— Nessuno —</option>
+                                <option value="luigi">🧔🏻‍♂️ Luigi</option>
+                                <option value="vale">👱🏻‍♀️👓 Vale</option>
+                                <option value="insieme">🧔🏻‍♂️👱🏻‍♀️ Insieme</option>
+                                <option value="nonni">👴🏻👵🏻 Nonni</option>
+                                <option value="autonomo">🚲 Da solo/a</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold uppercase text-amber-700 mb-1">🏡 Ritorno (Riprende)</label>
+                            <select id="evtDriverFrom" class="w-full h-9 px-2.5 rounded-xl border border-amber-300 bg-white text-xs font-bold text-slate-700">
+                                <option value="">— Nessuno —</option>
+                                <option value="luigi">🧔🏻‍♂️ Luigi</option>
+                                <option value="vale">👱🏻‍♀️👓 Vale</option>
+                                <option value="insieme">🧔🏻‍♂️👱🏻‍♀️ Insieme</option>
+                                <option value="nonni">👴🏻👵🏻 Nonni</option>
+                                <option value="autonomo">🚲 Da solo/a</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MINI-CHECKLIST DENTRO L'EVENTO -->
+                <div class="bg-slate-50 border-2 border-slate-200/70 rounded-2xl p-3">
+                    <label class="block text-xs font-bold text-slate-700 mb-2 flex items-center gap-1.5">
+                        <i class="ph-fill ph-check-square-offset text-emerald-600 text-base"></i>
+                        Cose da ricordare / portare (Mini-Checklist)
+                    </label>
+                    <div id="modalChecklistItems" class="space-y-1.5 mb-2"></div>
+                    <div class="flex gap-2">
+                        <input type="text" id="newChecklistInput" placeholder="Es. Tessera sanitaria, borsa sport, regalo..." onkeydown="if(event.key==='Enter'){event.preventDefault();addModalChecklistItem();}" class="flex-1 h-9 px-3 rounded-xl border border-slate-300 bg-white text-xs font-medium">
+                        <button type="button" onclick="addModalChecklistItem()" class="px-3 h-9 rounded-xl bg-slate-800 text-white text-xs font-bold hover:bg-slate-700">
+                            + Aggiungi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Note & Opzioni Extra (Ricorrenza + Evento Speciale Countdown) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Note / Luogo</label>
+                        <input type="text" id="evtNotes" placeholder="Es. Campo sportivo, portare 10€..." class="w-full h-10 px-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-medium">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-slate-400 mb-1">Ripeti ogni settimana</label>
+                        <select id="evtRepeatWeeks" class="w-full h-10 px-3 rounded-xl border-2 border-slate-200 bg-white text-xs font-semibold text-slate-700">
+                            <option value="1">Solo questo giorno</option>
+                            <option value="2">Per 2 settimane</option>
+                            <option value="4">Per 4 settimane (1 mese)</option>
+                            <option value="8">Per 8 settimane (2 mesi)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Flag Milestone & Notifica Telegram -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700 bg-violet-50 px-3 py-2 rounded-xl border border-violet-200">
+                        <input type="checkbox" id="evtIsMilestone" class="rounded text-violet-600 focus:ring-0 w-4 h-4">
+                        <span>🌟 Mostra nel Countdown in alto</span>
+                    </label>
+
+                    <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-sky-800 bg-sky-50 px-3 py-2 rounded-xl border border-sky-200">
+                        <input type="checkbox" id="evtNotifyTelegram" checked class="rounded text-sky-600 focus:ring-0 w-4 h-4">
+                        <span>📲 Avvisa su Telegram</span>
+                    </label>
+                </div>
+
+                <!-- Bottoni Salva / Elimina -->
+                <div class="flex items-center gap-2.5 pt-3 border-t border-slate-200">
+                    <button type="button" id="deleteEventBtn" onclick="deleteCurrentEvent()" class="hidden tactile-btn px-4 py-3 rounded-2xl bg-rose-100 text-rose-700 font-bold text-sm hover:bg-rose-200">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                    <button type="button" onclick="closeEventModal()" class="flex-1 py-3 rounded-2xl bg-slate-100 text-slate-600 font-bold text-sm hover:bg-slate-200">
+                        Annulla
+                    </button>
+                    <button type="submit" class="tactile-btn flex-[2] py-3 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-slate-950 font-display font-bold text-base">
+                        💾 Salva Impegno
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         MODALE IMPOSTAZIONI (DROPBOX + TELEGRAM BOT)
+         ========================================== -->
+    <div id="settingsModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-[#FFFDF9] w-full max-w-xl rounded-3xl border-2 border-amber-200 shadow-2xl p-5 max-h-[92vh] overflow-y-auto animate-pop space-y-5">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-xl">⚙️</span>
+                    <div>
+                        <h3 class="font-display font-bold text-xl text-slate-900">Motore Cloud & Telegram</h3>
+                        <p class="text-xs text-slate-500">Configura la sincronizzazione Dropbox e il Maggiordomo Telegram</p>
+                    </div>
+                </div>
+                <button onclick="closeSettingsModal()" class="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- SEZIONE 1: DROPBOX CLOUD SYNC -->
+            <div class="bg-blue-50/70 border-2 border-blue-200 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-display font-bold text-sm text-blue-950 flex items-center gap-2">
+                        <i class="ph-fill ph-dropbox-logo text-blue-600 text-xl"></i>
+                        1. Sincronizzazione Dropbox JSON
+                    </h4>
+                    <span class="text-[11px] font-mono bg-blue-100 text-blue-800 px-2 py-0.5 rounded-md">/calendar_barra.json</span>
+                </div>
+                <p class="text-xs text-blue-900/80 leading-relaxed">
+                    Inserisci il tuo Access Token Dropbox per leggere e salvare automaticamente gli impegni della famiglia sul file condiviso. Se lasciato vuoto, l'app funziona in memoria locale.
+                </p>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase text-blue-900 mb-1">Dropbox Access Token</label>
+                    <input type="password" id="cfgDropboxToken" placeholder="sl.Bxx..." class="w-full h-10 px-3 rounded-xl border border-blue-300 bg-white text-xs font-mono">
+                </div>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <button type="button" onclick="saveCloudConfig(); syncFromDropbox(true);" class="tactile-btn bg-blue-600 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+                        <i class="ph-bold ph-cloud-arrow-down"></i> Scarica da Dropbox
+                    </button>
+                    <button type="button" onclick="saveCloudConfig(); syncToDropbox(true);" class="tactile-btn bg-white text-blue-700 border border-blue-300 text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+                        <i class="ph-bold ph-cloud-arrow-up"></i> Forza Salvataggio su Dropbox
+                    </button>
+                </div>
+            </div>
+
+            <!-- SEZIONE 2: TELEGRAM BOT ("IL MAGGIORDOMO DI CASA") -->
+            <div class="bg-sky-50/80 border-2 border-sky-200 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h4 class="font-display font-bold text-sm text-sky-950 flex items-center gap-2">
+                        <i class="ph-fill ph-telegram-logo text-sky-500 text-xl"></i>
+                        2. Bot Telegram di Famiglia
+                    </h4>
+                    <span class="text-[11px] font-bold bg-sky-100 text-sky-700 px-2 py-0.5 rounded-md">Push Gratuito</span>
+                </div>
+                <p class="text-xs text-sky-900/80 leading-relaxed">
+                    Crea un bot con <b>@BotFather</b>, aggiungilo al gruppo di famiglia e incolla qui <b>Bot Token</b> e <b>Chat ID</b> (es. <code>-100123456789</code>).
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-sky-900 mb-1">Telegram Bot Token</label>
+                        <input type="password" id="cfgTelegramToken" placeholder="123456789:ABCdef..." class="w-full h-10 px-3 rounded-xl border border-sky-300 bg-white text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase text-sky-900 mb-1">Gruppo Chat ID</label>
+                        <input type="text" id="cfgTelegramChatId" placeholder="-1001234567890" class="w-full h-10 px-3 rounded-xl border border-sky-300 bg-white text-xs font-mono">
+                    </div>
+                </div>
+
+                <!-- Anteprima del messaggio Telegram generato -->
+                <div class="bg-white/90 rounded-xl p-3 border border-sky-200 text-xs space-y-1">
+                    <div class="text-[10px] font-bold uppercase text-slate-400 flex items-center justify-between">
+                        <span>Anteprima Notifica Gruppo Telegram:</span>
+                        <span class="text-sky-600">HTML Parse Mode</span>
+                    </div>
+                    <div id="telegramPreviewBox" class="font-sans text-slate-800 leading-snug pt-1">
+                        🔔 <b>Luigi ha appena aggiunto un impegno!</b><br>
+                        ⚽ <b>Allenamento Leo</b><br>
+                        📅 Sabato 31 Ott • 🕒 15:00 - 16:30<br>
+                        🚗 <i>Porta:</i> Luigi | 🏡 <i>Riprende:</i> Vale
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <button type="button" onclick="saveCloudConfig(); testTelegramNotification();" class="tactile-btn bg-sky-500 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5">
+                        <i class="ph-bold ph-paper-plane-right"></i> Invia Messaggio di Prova
+                    </button>
+                    <button type="button" onclick="exportJsonBackup()" class="bg-white text-slate-700 border border-slate-300 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1">
+                        <i class="ph-bold ph-download-simple"></i> Esporta JSON
+                    </button>
+                    <button type="button" onclick="resetDemoData()" class="bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold px-3 py-2 rounded-xl flex items-center gap-1 ml-auto">
+                        Ripristina Demo
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="saveCloudConfig(); closeSettingsModal();" class="tactile-btn bg-slate-900 text-white font-display font-bold text-sm px-6 py-2.5 rounded-2xl">
+                    Salva e Chiudi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICHE IN-APP -->
+    <div id="toastContainer" class="fixed top-16 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+    <!-- ==========================================
+         LOGICA JAVASCRIPT DELL'APPLICAZIONE
+         ========================================== -->
+    <script>
+        // --- 1. AVATAR SVG PERSONALIZZATI & MEMBRI DELLA FAMIGLIA ---
+        function getCustomAvatarSVG(memberId) {
+            switch (memberId) {
+                case 'luigi':
+                    // Luigi: capelli corti scuri un po' brizzolati alle tempie e barba curata
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#DBEAFE"/>
+                        <!-- Spalle / Maglia blu -->
+                        <path d="M12 64C14 51 22 47 32 47C42 47 50 51 52 64H12Z" fill="#2563EB"/>
+                        <!-- Collo e Orecchie -->
+                        <rect x="27" y="40" width="10" height="9" rx="4" fill="#F3C6A5"/>
+                        <circle cx="16" cy="32" r="4" fill="#F3C6A5"/>
+                        <circle cx="48" cy="32" r="4" fill="#F3C6A5"/>
+                        <!-- Viso -->
+                        <rect x="17" y="15" width="30" height="31" rx="14" fill="#FAD2B8"/>
+                        <!-- Capelli corti scuri -->
+                        <path d="M16 28C16 17 22 11 32 11C42 11 48 17 48 28C46 21 41 18 32 18C23 18 18 21 16 28Z" fill="#27272A"/>
+                        <path d="M23 13C27 10 37 10 41 13" stroke="#52525B" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Ciuffi brizzolati (argento/grigio chiaro) sulle tempie -->
+                        <path d="M16.5 23.5C17.5 20.5 19.5 19 21.5 19.5" stroke="#CBD5E1" stroke-width="2.6" stroke-linecap="round"/>
+                        <path d="M16.2 26.5C17.5 24.5 19 24 20.8 24.5" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M47.5 23.5C46.5 20.5 44.5 19 42.5 19.5" stroke="#CBD5E1" stroke-width="2.6" stroke-linecap="round"/>
+                        <path d="M47.8 26.5C46.5 24.5 45 24 43.2 24.5" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Sopracciglia e Occhi -->
+                        <path d="M22 26.5C24 25.5 26.5 25.5 28 26.5" stroke="#27272A" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M36 26.5C37.5 25.5 40 25.5 42 26.5" stroke="#27272A" stroke-width="2" stroke-linecap="round"/>
+                        <circle cx="25" cy="30.5" r="2.1" fill="#1E293B"/>
+                        <circle cx="39" cy="30.5" r="2.1" fill="#1E293B"/>
+                        <circle cx="25.7" cy="29.8" r="0.7" fill="#FFFFFF"/>
+                        <circle cx="39.7" cy="29.8" r="0.7" fill="#FFFFFF"/>
+                        <!-- Barba scura un po' brizzolata e baffi -->
+                        <path d="M17.5 33.5C17.5 42 23.5 47 32 47C40.5 47 46.5 42 46.5 33.5C44.5 36.5 41.5 38 38 38C35.8 38 34.2 36.5 32 36.5C29.8 36.5 28.2 38 26 38C22.5 38 19.5 36.5 17.5 33.5Z" fill="#27272A"/>
+                        <!-- Riflessi brizzolati nella barba -->
+                        <path d="M22 41.5C23.5 43 25.5 44 27.5 44.3" stroke="#94A3B8" stroke-width="1.6" stroke-linecap="round"/>
+                        <path d="M42 41.5C40.5 43 38.5 44 36.5 44.3" stroke="#94A3B8" stroke-width="1.6" stroke-linecap="round"/>
+                        <!-- Sorriso -->
+                        <path d="M28.5 39.8C30 41.2 34 41.2 35.5 39.8" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+                    </svg>`;
+
+                case 'vale':
+                    // Vale: capelli lunghi biondi e occhiali
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#FCE7F3"/>
+                        <!-- Capelli biondi lunghi dietro le spalle -->
+                        <path d="M11 30C11 15 20 9 32 9C44 9 53 15 53 30C54 41 55 51 52 59H12C9 51 10 41 11 30Z" fill="#FACC15"/>
+                        <path d="M14 34C13 44 13 52 15 58" stroke="#EAB308" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M50 34C51 44 51 52 49 58" stroke="#EAB308" stroke-width="2" stroke-linecap="round"/>
+                        <!-- Maglia rosa -->
+                        <path d="M15 64C17 52 23 48 32 48C41 48 47 52 49 64H15Z" fill="#EC4899"/>
+                        <!-- Collo e Viso -->
+                        <rect x="28" y="41" width="8" height="9" rx="4" fill="#F5CBA7"/>
+                        <rect x="18" y="16" width="28" height="29" rx="13.5" fill="#FDE2CE"/>
+                        <!-- Ciuffo biondo morbido laterale -->
+                        <path d="M17 28C18 19 25 14 35 15C41 16 45 20 47 27C43 21 37 19 29 20C23 21 19 24 17 28Z" fill="#FDE047"/>
+                        <!-- Ciocche bionde lunghe sul davanti -->
+                        <path d="M17 27C15 36 15 46 18 55" stroke="#FACC15" stroke-width="4.5" stroke-linecap="round"/>
+                        <path d="M47 27C49 36 49 46 46 55" stroke="#FACC15" stroke-width="4.5" stroke-linecap="round"/>
+                        <!-- Occhi e Guance -->
+                        <circle cx="25.5" cy="30.5" r="1.9" fill="#1E293B"/>
+                        <circle cx="38.5" cy="30.5" r="1.9" fill="#1E293B"/>
+                        <circle cx="22.5" cy="35" r="2.5" fill="#F472B6" fill-opacity="0.35"/>
+                        <circle cx="41.5" cy="35" r="2.5" fill="#F472B6" fill-opacity="0.35"/>
+                        <!-- Occhiali eleganti -->
+                        <rect x="20" y="26.5" width="10.5" height="8" rx="3" stroke="#831843" stroke-width="2" fill="#FFFFFF" fill-opacity="0.25"/>
+                        <rect x="33.5" y="26.5" width="10.5" height="8" rx="3" stroke="#831843" stroke-width="2" fill="#FFFFFF" fill-opacity="0.25"/>
+                        <path d="M30.5 30H33.5" stroke="#831843" stroke-width="2" stroke-linecap="round"/>
+                        <path d="M18 29.5L20 30" stroke="#831843" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M44 30L46 29.5" stroke="#831843" stroke-width="1.8" stroke-linecap="round"/>
+                        <!-- Sorriso -->
+                        <path d="M28 38.5C30 40.5 34 40.5 36 38.5" stroke="#BE185D" stroke-width="2.1" stroke-linecap="round"/>
+                    </svg>`;
+
+                case 'leo':
+                    // Leo: ragazzo con ciuffo castano così com'è + occhiali
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#D1FAE5"/>
+                        <!-- Felpa verde smeraldo -->
+                        <path d="M14 64C16 52 23 48 32 48C41 48 48 52 50 64H14Z" fill="#10B981"/>
+                        <!-- Collo e Orecchie -->
+                        <rect x="28" y="41" width="8" height="8" rx="4" fill="#F3C6A5"/>
+                        <circle cx="17" cy="33" r="3.8" fill="#F3C6A5"/>
+                        <circle cx="47" cy="33" r="3.8" fill="#F3C6A5"/>
+                        <!-- Viso -->
+                        <rect x="18" y="17" width="28" height="28" rx="13" fill="#FAD2B8"/>
+                        <!-- Capelli castani sbarazzini da ragazzo -->
+                        <path d="M16 28C16 17 23 11 32 11C41 11 48 17 48 28C45 22 40 20 33 20C25 20 20 22 16 28Z" fill="#6B3E26"/>
+                        <path d="M25 12.5C28 9.5 34 9.5 38 12.5" stroke="#6B3E26" stroke-width="3" stroke-linecap="round"/>
+                        <!-- Occhi -->
+                        <circle cx="25.5" cy="31" r="2" fill="#1E293B"/>
+                        <circle cx="38.5" cy="31" r="2" fill="#1E293B"/>
+                        <!-- Occhiali di Leo -->
+                        <rect x="20" y="27" width="10.5" height="8" rx="2.5" stroke="#0F172A" stroke-width="2.1" fill="#E0F2FE" fill-opacity="0.3"/>
+                        <rect x="33.5" y="27" width="10.5" height="8" rx="2.5" stroke="#0F172A" stroke-width="2.1" fill="#E0F2FE" fill-opacity="0.3"/>
+                        <path d="M30.5 30.5H33.5" stroke="#0F172A" stroke-width="2.1" stroke-linecap="round"/>
+                        <path d="M17.5 30L20 30.5" stroke="#0F172A" stroke-width="1.8" stroke-linecap="round"/>
+                        <path d="M44 30.5L46.5 30" stroke="#0F172A" stroke-width="1.8" stroke-linecap="round"/>
+                        <!-- Sorriso allegro -->
+                        <path d="M27.5 38.5C29.5 40.8 34.5 40.8 36.5 38.5" stroke="#7C2D12" stroke-width="2.1" stroke-linecap="round"/>
+                    </svg>`;
+
+                case 'kiki':
+                    // Kiki: bambina con capelli castani lisci alle spalle
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#FEF3C7"/>
+                        <!-- Capelli castani lisci che scendono dritti alle spalle -->
+                        <path d="M14 27C14 15 21 11 32 11C43 11 50 15 50 27V48C50 50 48.5 51 46.5 51H17.5C15.5 51 14 50 14 48V27Z" fill="#5C3A21"/>
+                        <!-- Maglietta ambra/arancio -->
+                        <path d="M16 64C18 53 24 49 32 49C40 49 46 53 48 64H16Z" fill="#F59E0B"/>
+                        <!-- Collo e Viso dolce -->
+                        <rect x="28.5" y="42" width="7" height="8" rx="3.5" fill="#F5CBA7"/>
+                        <rect x="19" y="18" width="26" height="26" rx="12.5" fill="#FDE2CE"/>
+                        <!-- Frangetta/riga castana liscia e ciocche dritte alle spalle -->
+                        <path d="M18 27C19 19 25 15 32 15C39 15 45 19 46 27C42 22 37 20 32 20C27 20 22 22 18 27Z" fill="#6E472B"/>
+                        <rect x="14.5" y="25" width="5" height="24" rx="2.5" fill="#6E472B"/>
+                        <rect x="44.5" y="25" width="5" height="24" rx="2.5" fill="#6E472B"/>
+                        <!-- Fermaglio carino -->
+                        <circle cx="43.5" cy="23.5" r="2.3" fill="#FB7185"/>
+                        <!-- Occhi grandi espressivi e guance rosate -->
+                        <circle cx="26" cy="31.5" r="2.1" fill="#1E293B"/>
+                        <circle cx="38" cy="31.5" r="2.1" fill="#1E293B"/>
+                        <circle cx="26.6" cy="30.8" r="0.7" fill="#FFFFFF"/>
+                        <circle cx="38.6" cy="30.8" r="0.7" fill="#FFFFFF"/>
+                        <circle cx="22.8" cy="35" r="2.4" fill="#FB7185" fill-opacity="0.4"/>
+                        <circle cx="41.2" cy="35" r="2.4" fill="#FB7185" fill-opacity="0.4"/>
+                        <!-- Sorriso dolce -->
+                        <path d="M28.5 37.8C30.2 39.6 33.8 39.6 35.5 37.8" stroke="#9A3412" stroke-width="2" stroke-linecap="round"/>
+                    </svg>`;
+
+                case 'all':
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#F1F5F9"/>
+                        <path d="M14 31L32 16L50 31" stroke="#F59E0B" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M20 28V47C20 48.6569 21.3431 50 23 50H41C42.6569 50 44 48.6569 44 47V28" fill="#FEF3C7" stroke="#F59E0B" stroke-width="3.5" stroke-linejoin="round"/>
+                        <path d="M32 43C32 43 26 39 26 35.5C26 33.5 27.6 32 29.5 32C30.7 32 31.5 32.6 32 33.4C32.5 32.6 33.3 32 34.5 32C36.4 32 38 33.5 38 35.5C38 39 32 43 32 43Z" fill="#EC4899"/>
+                    </svg>`;
+
+                case 'tutti':
+                default:
+                    return `
+                    <svg viewBox="0 0 64 64" class="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="64" height="64" rx="32" fill="#EDE9FE"/>
+                        <circle cx="23" cy="24" r="6" fill="#3B82F6"/>
+                        <circle cx="41" cy="24" r="6" fill="#EC4899"/>
+                        <circle cx="24" cy="40" r="5.5" fill="#10B981"/>
+                        <circle cx="40" cy="40" r="5.5" fill="#F59E0B"/>
+                        <path d="M32 35.5C32 35.5 27.5 32.5 27.5 29.8C27.5 28.2 28.8 27 30.2 27C31.1 27 31.7 27.5 32 28.1C32.3 27.5 32.9 27 33.8 27C35.2 27 36.5 28.2 36.5 29.8C36.5 32.5 32 35.5 32 35.5Z" fill="#8B5CF6"/>
+                    </svg>`;
+            }
+        }
+
+        function renderMemberAvatar(memberId, sizeClasses = 'w-8 h-8') {
+            return `<span class="inline-flex items-center justify-center rounded-full overflow-hidden shrink-0 ${sizeClasses}">${getCustomAvatarSVG(memberId)}</span>`;
+        }
+
+        const FAMILY_MEMBERS = {
+            tutti: { id: 'tutti', name: 'Tutti', tgEmoji: '👨‍👩‍👧‍👦', avatar: getCustomAvatarSVG('tutti'), color: '#8B5CF6', bgLight: 'bg-violet-100', textCol: 'text-violet-800', borderCol: 'border-violet-300', dotCol: 'bg-violet-500' },
+            luigi: { id: 'luigi', name: 'Luigi', tgEmoji: '🧔🏻‍♂️', avatar: getCustomAvatarSVG('luigi'), color: '#3B82F6', bgLight: 'bg-blue-100', textCol: 'text-blue-800', borderCol: 'border-blue-300', dotCol: 'bg-blue-500' },
+            vale:  { id: 'vale',  name: 'Vale',  tgEmoji: '👱🏻‍♀️👓', avatar: getCustomAvatarSVG('vale'),  color: '#EC4899', bgLight: 'bg-pink-100', textCol: 'text-pink-800', borderCol: 'border-pink-300', dotCol: 'bg-pink-500' },
+            leo:   { id: 'leo',   name: 'Leo',   tgEmoji: '👦🏻👓', avatar: getCustomAvatarSVG('leo'),   color: '#10B981', bgLight: 'bg-emerald-100', textCol: 'text-emerald-800', borderCol: 'border-emerald-300', dotCol: 'bg-emerald-500' },
+            kiki:  { id: 'kiki',  name: 'Kiki',  tgEmoji: '👧🏻', avatar: getCustomAvatarSVG('kiki'),  color: '#F59E0B', bgLight: 'bg-amber-100', textCol: 'text-amber-900', borderCol: 'border-amber-300', dotCol: 'bg-amber-500' }
+        };
+
+        const DRIVER_LABELS = {
+            luigi: '🧔🏻‍♂️ Luigi',
+            vale: '👱🏻‍♀️👓 Vale',
+            insieme: '🧔🏻‍♂️👱🏻‍♀️ Insieme',
+            nonni: '👴🏻👵🏻 Nonni',
+            autonomo: '🚲 Autonomo'
+        };
+
+        function renderDriverBadgeContent(driverKey) {
+            if (driverKey === 'luigi' || driverKey === 'vale') {
+                const m = FAMILY_MEMBERS[driverKey];
+                return `<span class="inline-flex items-center gap-1">${renderMemberAvatar(driverKey, 'w-4 h-4')}<span>${m.name}</span></span>`;
+            }
+            if (driverKey === 'insieme') {
+                return `<span class="inline-flex items-center gap-1">${renderMemberAvatar('luigi', 'w-4 h-4')}${renderMemberAvatar('vale', 'w-4 h-4')}<span>Insieme</span></span>`;
+            }
+            return `<span>${DRIVER_LABELS[driverKey] || driverKey}</span>`;
+        }
+
+        // Bottoni Rapidi ("Big Buttons") per creazione in 2 tocchi
+        const QUICK_TEMPLATES = [
+            { title: 'Sport Leo', icon: '⚽', members: ['leo'], start: '17:00', end: '18:30', driverTo: 'luigi', driverFrom: 'vale', bg: 'bg-emerald-100/90 hover:bg-emerald-200/80 border-emerald-300 text-emerald-950', checklist: ['Borraccia', 'Scarpette'] },
+            { title: 'Impegno Kiki', icon: '🎀', members: ['kiki'], start: '16:30', end: '19:00', driverTo: 'vale', driverFrom: 'luigi', bg: 'bg-amber-100/90 hover:bg-amber-200/80 border-amber-300 text-amber-950', checklist: ['Zainetto', 'Merenda'] },
+            { title: 'Visita / Medico', icon: '🩺', members: ['kiki', 'vale'], start: '15:00', end: '16:00', driverTo: 'vale', driverFrom: 'vale', bg: 'bg-rose-100/90 hover:bg-rose-200/80 border-rose-300 text-rose-950', checklist: ['Tessera sanitaria'] },
+            { title: 'Cena / Pizza', icon: '🍕', members: ['tutti'], start: '20:00', end: '22:30', driverTo: 'insieme', driverFrom: 'insieme', bg: 'bg-violet-100/90 hover:bg-violet-200/80 border-violet-300 text-violet-950', checklist: [] },
+            { title: 'Scuola', icon: '🏫', members: ['leo', 'kiki'], start: '14:30', end: '16:30', driverTo: '', driverFrom: '', bg: 'bg-sky-100/90 hover:bg-sky-200/80 border-sky-300 text-sky-950', checklist: ['Controllare diario'] },
+            { title: 'Spesa & Casa', icon: '🛒', members: ['luigi', 'vale'], start: '18:30', end: '19:30', driverTo: '', driverFrom: '', bg: 'bg-orange-100/90 hover:bg-orange-200/80 border-orange-300 text-orange-950', checklist: ['Borse riutilizzabili'] }
+        ];
+
+        // --- 2. STATO DELL'APPLICAZIONE ---
+        const STORAGE_KEY_DB = 'casa_barra_calendar_db_v2';
+        const STORAGE_KEY_CFG = 'casa_barra_cloud_cfg_v1';
+
+        let activeFilterMember = 'all'; // 'all' oppure id membro
+        let activeAuthor = 'luigi'; // Chi sta usando l'app in questo momento
+        let currentView = 'timeline'; // 'timeline' | 'month'
+        let currentMonthCursor = new Date(2026, 9, 1); // Ottobre 2026
+        let selectedMonthDateStr = getTodayISO();
+        let modalSelectedMembers = new Set(['tutti']);
+        let modalChecklistDraft = [];
+
+        let appData = {
+            last_updated: new Date().toISOString(),
+            dinners: {}, // es. { "2026-10-30": "Pizza fatta in casa 🍕" }
+            events: []
+        };
+
+        // Helper per data odierna coerente
+        function getTodayISO() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            const d = String(now.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function addDaysISO(baseIso, daysToAdd) {
+            const [y, m, d] = baseIso.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            dt.setDate(dt.getDate() + daysToAdd);
+            const ny = dt.getFullYear();
+            const nm = String(dt.getMonth() + 1).padStart(2, '0');
+            const nd = String(dt.getDate()).padStart(2, '0');
+            return `${ny}-${nm}-${nd}`;
+        }
+
+        // --- 3. DATI DEMO REALISTICI E DIVERTENTI ---
+        function createDefaultSampleData() {
+            const today = getTodayISO();
+            const tomorrow = addDaysISO(today, 1);
+            const inTwoDays = addDaysISO(today, 2);
+            const inFiveDays = addDaysISO(today, 5);
+            const kikiBday = '2026-11-11';
+
+            return {
+                last_updated: new Date().toISOString(),
+                dinners: {
+                    [today]: "Vellutata di zucca + Piadine farcite 🎃🧀",
+                    [tomorrow]: "Pizza Mostruosa di Halloween in famiglia! 🍕👻",
+                    [inTwoDays]: "Pranzo dai Nonni + lasagne 🍝"
+                },
+                events: [
+                    {
+                        id: 'evt_demo_1',
+                        title: 'Allenamento Calcio Leo',
+                        icon: '⚽',
+                        date: today,
+                        start: '17:30',
+                        end: '19:00',
+                        members: ['leo'],
+                        driverTo: 'luigi',
+                        driverFrom: 'vale',
+                        notes: 'Campo sportivo comunale',
+                        isMilestone: false,
+                        checklist: [
+                            { text: 'Borraccia piena', done: true },
+                            { text: 'K-Way per la pioggia', done: false }
+                        ]
+                    },
+                    {
+                        id: 'evt_demo_2',
+                        title: 'Spesa per festa di Halloween',
+                        icon: '🛒',
+                        date: today,
+                        start: '18:15',
+                        end: '19:15',
+                        members: ['vale', 'kiki'],
+                        driverTo: 'vale',
+                        driverFrom: 'vale',
+                        notes: 'Prendere caramelle per dolcetto o scherzetto',
+                        isMilestone: false,
+                        checklist: [
+                            { text: 'Caramelle gommose', done: true },
+                            { text: 'Zucca da intagliare', done: false }
+                        ]
+                    },
+                    {
+                        id: 'evt_demo_3',
+                        title: 'Festa di Halloween & Dolcetto o Scherzetto',
+                        icon: '🎃',
+                        date: tomorrow,
+                        start: '16:30',
+                        end: '20:30',
+                        members: ['tutti', 'leo', 'kiki'],
+                        driverTo: 'insieme',
+                        driverFrom: 'insieme',
+                        notes: 'Ritrovo in piazza con gli amichetti alle 16:30',
+                        isMilestone: true,
+                        checklist: [
+                            { text: 'Costume e trucco Kiki', done: true },
+                            { text: 'Cestino porta-dolcetti', done: false },
+                            { text: 'Torcia elettrica', done: false }
+                        ]
+                    },
+                    {
+                        id: 'evt_demo_4',
+                        title: 'Pranzo Domenicale dai Nonni',
+                        icon: '🍕',
+                        date: inTwoDays,
+                        start: '12:30',
+                        end: '16:00',
+                        members: ['tutti'],
+                        driverTo: 'luigi',
+                        driverFrom: 'vale',
+                        notes: 'Portare il dolce in pasticceria',
+                        isMilestone: false,
+                        checklist: [
+                            { text: 'Ritirare pasticcini alle 11:30', done: false }
+                        ]
+                    },
+                    {
+                        id: 'evt_demo_5',
+                        title: 'Controllo Dentista Kiki',
+                        icon: '🦷',
+                        date: inFiveDays,
+                        start: '15:30',
+                        end: '16:30',
+                        members: ['kiki', 'vale'],
+                        driverTo: 'vale',
+                        driverFrom: 'vale',
+                        notes: 'Studio Dott.ssa Rossi',
+                        isMilestone: false,
+                        checklist: [
+                            { text: 'Tessera sanitaria Kiki', done: false }
+                        ]
+                    },
+                    {
+                        id: 'evt_demo_6',
+                        title: 'Compleanno Kiki (8 anni!) 🎂',
+                        icon: '🎂',
+                        date: kikiBday,
+                        start: '16:30',
+                        end: '19:30',
+                        members: ['tutti', 'kiki'],
+                        driverTo: 'insieme',
+                        driverFrom: 'insieme',
+                        notes: 'Festa con gli amici + torta personalizzata!',
+                        isMilestone: true,
+                        checklist: [
+                            { text: 'Ordinare torta in pasticceria', done: true },
+                            { text: 'Confermare invitati nel gruppo genitori', done: false },
+                            { text: 'Candeline numero 8', done: false }
+                        ]
+                    }
+                ]
+            };
+        }
+
+        // --- 4. INIZIALIZZAZIONE ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initTelegramWebAppIntegration();
+            setActiveAuthor(activeAuthor);
+            loadLocalData();
+            loadCloudConfigToInputs();
+            updateHeaderDate();
+            renderQuickTemplates();
+            renderMemberFilterBar();
+            renderAll();
+
+            // Se c'è un token Dropbox salvato, sincronizza silenziosamente all'avvio
+            const cfg = getCloudConfig();
+            if (cfg.dropboxToken) {
+                syncFromDropbox(false);
+            }
+        });
+
+        function initTelegramWebAppIntegration() {
+            try {
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+                    if (tgUser && tgUser.first_name) {
+                        const fname = tgUser.first_name.toLowerCase();
+                        if (fname.includes('val')) setActiveAuthor('vale');
+                        else if (fname.includes('leo')) setActiveAuthor('leo');
+                        else if (fname.includes('kik') || fname.includes('vit')) setActiveAuthor('kiki');
+                        else setActiveAuthor('luigi');
+                    }
+                }
+            } catch (e) {
+                console.warn('Telegram WebApp non attivo:', e);
+            }
+        }
+
+        function updateHeaderDate() {
+            const now = new Date();
+            const formatted = now.toLocaleDateString('it-IT', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById('currentDateHeader').textContent =
+                formatted.charAt(0).toUpperCase() + formatted.slice(1);
+            currentMonthCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+        }
+
+        // --- 5. GESTIONE AUTORE ATTIVO ("CHI STA USANDO L'APP") ---
+        const AUTHOR_CYCLE = ['luigi', 'vale', 'leo', 'kiki'];
+        function cycleActiveAuthor() {
+            const idx = AUTHOR_CYCLE.indexOf(activeAuthor);
+            const next = AUTHOR_CYCLE[(idx + 1) % AUTHOR_CYCLE.length];
+            setActiveAuthor(next);
+            showToast(`Ora stai usando l'app come ${FAMILY_MEMBERS[next].tgEmoji} ${FAMILY_MEMBERS[next].name}`);
+        }
+
+        function setActiveAuthor(memberId) {
+            activeAuthor = memberId;
+            const m = FAMILY_MEMBERS[memberId];
+            document.getElementById('activeAuthorAvatar').innerHTML = m.avatar;
+            document.getElementById('activeAuthorName').textContent = m.name;
+        }
+
+        // --- 6. RENDERING COMPONENTI PRINCIPALI ---
+        function renderAll() {
+            renderMilestonesStrip();
+            renderMemberFilterBar();
+            if (currentView === 'timeline') {
+                renderTimelineView();
+            } else {
+                renderMonthView();
+            }
+        }
+
+        // A. Striscia Countdown Eventi Speciali
+        function renderMilestonesStrip() {
+            const strip = document.getElementById('milestonesStrip');
+            const today = getTodayISO();
+
+            const milestones = appData.events
+                .filter(e => e.isMilestone && e.date >= today)
+                .sort((a, b) => a.date.localeCompare(b.date));
+
+            if (milestones.length === 0) {
+                strip.innerHTML = '';
+                return;
+            }
+
+            strip.innerHTML = milestones.map(ev => {
+                const diffDays = calcDaysDiff(today, ev.date);
+                let badgeText = '';
+                if (diffDays === 0) badgeText = 'OGGI! 🎉';
+                else if (diffDays === 1) badgeText = 'DOMANI! ✨';
+                else badgeText = `tra ${diffDays} giorni`;
+
+                return `
+                    <div onclick="openEventModal('${ev.id}')" class="cursor-pointer shrink-0 flex items-center gap-2.5 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 text-white px-3.5 py-2 rounded-2xl shadow-md hover:scale-[1.02] transition">
+                        <span class="text-xl bg-white/20 w-8 h-8 rounded-xl flex items-center justify-center">${ev.icon}</span>
+                        <div class="leading-tight">
+                            <div class="text-xs font-bold tracking-wide">${escapeHtml(ev.title)}</div>
+                            <div class="text-[10px] font-medium text-amber-100">${formatShortDateIT(ev.date)} • <b class="underline">${badgeText}</b></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // B. Barra Filtro Membri Famiglia
+        function renderMemberFilterBar() {
+            const bar = document.getElementById('memberFilterBar');
+            const allItems = [
+                { id: 'all', name: 'Casa', avatar: getCustomAvatarSVG('all'), dotCol: 'bg-slate-800' },
+                FAMILY_MEMBERS.luigi,
+                FAMILY_MEMBERS.vale,
+                FAMILY_MEMBERS.leo,
+                FAMILY_MEMBERS.kiki,
+                FAMILY_MEMBERS.tutti
+            ];
+
+            bar.innerHTML = allItems.map(item => {
+                const isSelected = activeFilterMember === item.id;
+                const count = countUpcomingEventsForMember(item.id);
+                return `
+                    <button onclick="setMemberFilter('${item.id}')" class="tactile-btn relative flex flex-col items-center justify-center py-2 px-1 rounded-2xl transition-all ${
+                        isSelected
+                            ? 'bg-slate-900 text-white scale-[1.03]'
+                            : 'bg-amber-50/70 hover:bg-amber-100/80 text-slate-700'
+                    }">
+                        <span class="w-9 h-9 rounded-full overflow-hidden border-2 ${isSelected ? 'border-amber-400' : 'border-white'} shadow-sm mb-1 flex items-center justify-center">${item.avatar}</span>
+                        <span class="text-[11px] font-bold tracking-tight truncate max-w-full">${item.name}</span>
+                        <span class="mt-0.5 text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                            isSelected ? 'bg-amber-400 text-slate-950' : 'bg-white text-slate-500 border border-slate-200'
+                        }">${count}</span>
+                    </button>
+                `;
+            }).join('');
+
+            const labelEl = document.getElementById('activeFilterLabel');
+            if (activeFilterMember === 'all') {
+                labelEl.textContent = 'Tutti gli impegni di casa';
+            } else {
+                const m = FAMILY_MEMBERS[activeFilterMember];
+                labelEl.innerHTML = `<span class="inline-flex items-center gap-1.5">Filtro attivo: ${renderMemberAvatar(activeFilterMember, 'w-4 h-4')} <b>${m.name}</b></span>`;
+            }
+        }
+
+        function setMemberFilter(memberId) {
+            activeFilterMember = memberId;
+            renderAll();
+        }
+
+        function countUpcomingEventsForMember(memberId) {
+            const today = getTodayISO();
+            return appData.events.filter(ev => {
+                if (ev.date < today) return false;
+                if (memberId === 'all') return true;
+                return ev.members.includes(memberId) || ev.members.includes('tutti');
+            }).length;
+        }
+
+        // C. Bottoni Rapidi ("Big Buttons")
+        function renderQuickTemplates() {
+            const grid = document.getElementById('quickTemplatesGrid');
+            grid.innerHTML = QUICK_TEMPLATES.map((tpl, idx) => `
+                <button onclick="openTemplateQuickAdd(${idx})" class="tactile-btn ${tpl.bg} p-2.5 rounded-2xl flex flex-col items-center justify-center text-center gap-1 group">
+                    <span class="text-2xl group-hover:scale-110 transition-transform">${tpl.icon}</span>
+                    <span class="font-display font-semibold text-xs leading-tight">${tpl.title}</span>
+                </button>
+            `).join('');
+        }
+
+        // D. Vista Timeline ("Oggi & Prossimi")
+        function renderTimelineView() {
+            const today = getTodayISO();
+            const tomorrow = addDaysISO(today, 1);
+            const listEl = document.getElementById('timelineDaysList');
+            const nextUpEl = document.getElementById('nextUpBanner');
+
+            // Filtra eventi da oggi in avanti (più eventuali di oggi)
+            const filteredEvents = appData.events
+                .filter(ev => {
+                    if (ev.date < today) return false;
+                    if (activeFilterMember === 'all') return true;
+                    return ev.members.includes(activeFilterMember) || ev.members.includes('tutti');
+                })
+                .sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start));
+
+            // Banner Prossimo Impegno Imminente
+            if (filteredEvents.length > 0) {
+                const nextEv = filteredEvents[0];
+                const diff = calcDaysDiff(today, nextEv.date);
+                const whenBadge = diff === 0 ? `Oggi alle ${nextEv.start}` : (diff === 1 ? `Domani alle ${nextEv.start}` : `${formatShortDateIT(nextEv.date)} alle ${nextEv.start}`);
+                nextUpEl.className = "block bg-gradient-to-r from-amber-400 via-orange-400 to-rose-400 p-0.5 rounded-3xl shadow-md";
+                nextUpEl.innerHTML = `
+                    <div onclick="openEventModal('${nextEv.id}')" class="cursor-pointer bg-[#FFFDF9] rounded-[22px] p-3.5 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 rounded-2xl bg-amber-100 flex items-center justify-center text-2xl shrink-0">
+                                ${nextEv.icon}
+                            </div>
+                            <div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500 text-white">Prossimo Impegno</span>
+                                    <span class="text-xs font-bold text-amber-700">${whenBadge}</span>
+                                </div>
+                                <h4 class="font-display font-bold text-base text-slate-900 mt-0.5">${escapeHtml(nextEv.title)}</h4>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                            ${renderAvatarsStack(nextEv.members)}
+                        </div>
+                    </div>
+                `;
+            } else {
+                nextUpEl.className = "hidden";
+            }
+
+            // Costruisci l'elenco delle giornate (assicurando sempre Oggi e Domani visibili per il menu cena!)
+            const daySet = new Set([today, tomorrow]);
+            filteredEvents.forEach(ev => daySet.add(ev.date));
+            const sortedDays = Array.from(daySet).sort();
+
+            listEl.innerHTML = sortedDays.map(dateStr => {
+                const dayEvents = filteredEvents.filter(e => e.date === dateStr);
+                const isToday = dateStr === today;
+                const isTomorrow = dateStr === tomorrow;
+
+                let dayBadge = '';
+                if (isToday) dayBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-display font-bold bg-emerald-500 text-white">OGGI</span>';
+                else if (isTomorrow) dayBadge = '<span class="px-2.5 py-0.5 rounded-full text-xs font-display font-bold bg-amber-500 text-white">DOMANI</span>';
+
+                const dinnerNote = appData.dinners?.[dateStr] || '';
+
+                return `
+                    <div class="space-y-2.5">
+                        <!-- Intestazione Giorno -->
+                        <div class="flex items-center justify-between px-1">
+                            <div class="flex items-center gap-2">
+                                ${dayBadge}
+                                <h3 class="font-display font-bold text-lg text-slate-900 capitalize">
+                                    ${formatFullDayIT(dateStr)}
+                                </h3>
+                            </div>
+                            <button onclick="openEventModal(null, '${dateStr}')" class="text-xs font-bold text-slate-500 hover:text-slate-900 bg-white px-2.5 py-1 rounded-xl border border-slate-200 flex items-center gap-1">
+                                <i class="ph-bold ph-plus"></i> Aggiungi qui
+                            </button>
+                        </div>
+
+                        <!-- Widget "Cosa si mangia stasera / Chi c'è a cena?" -->
+                        <div class="bg-amber-50/90 border border-amber-200/90 rounded-2xl px-3.5 py-2 flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0 flex-1">
+                                <span class="text-base shrink-0">🍽️</span>
+                                <input
+                                    type="text"
+                                    value="${escapeHtml(dinnerNote)}"
+                                    placeholder="Cena di questa sera: tocca per scrivere menu o chi c'è..."
+                                    onchange="saveDinnerNote('${dateStr}', this.value)"
+                                    class="w-full bg-transparent text-xs font-semibold text-amber-950 placeholder-amber-700/50 focus:outline-none"
+                                >
+                            </div>
+                            <i class="ph-bold ph-pencil-simple text-amber-600/70 text-xs shrink-0"></i>
+                        </div>
+
+                        <!-- Card degli Eventi del Giorno -->
+                        ${dayEvents.length === 0 ? `
+                            <div class="tactile-card rounded-3xl p-4 text-center text-slate-400 text-xs font-medium border-dashed">
+                                🎈 Nessun impegno in programma per questa giornata!
+                            </div>
+                        ` : `
+                            <div class="space-y-3">
+                                ${dayEvents.map(ev => renderEventCardHTML(ev)).join('')}
+                            </div>
+                        `}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render singola Card Evento (con Avatar, Taxi Andata/Ritorno e Mini-Checklist interattiva)
+        function renderEventCardHTML(ev) {
+            const primaryMember = FAMILY_MEMBERS[ev.members[0]] || FAMILY_MEMBERS.tutti;
+            const hasTaxi = ev.driverTo || ev.driverFrom;
+            const hasChecklist = Array.isArray(ev.checklist) && ev.checklist.length > 0;
+
+            return `
+                <div class="tactile-card rounded-3xl p-4 relative overflow-hidden group">
+                    <!-- Barra laterale colorata in base ai partecipanti -->
+                    <div class="absolute left-0 top-0 bottom-0 w-2" style="background: ${getEventGradient(ev.members)}"></div>
+
+                    <div class="pl-2 flex flex-col gap-2.5">
+                        <!-- Riga Top: Orario + Titolo + Avatar Partecipanti -->
+                        <div class="flex items-start justify-between gap-2">
+                            <div onclick="openEventModal('${ev.id}')" class="cursor-pointer flex items-start gap-3">
+                                <div class="w-12 h-12 rounded-2xl ${primaryMember.bgLight} border ${primaryMember.borderCol} flex items-center justify-center text-2xl shrink-0 shadow-sm">
+                                    ${ev.icon}
+                                </div>
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="inline-flex items-center gap-1 text-xs font-extrabold text-slate-800 bg-slate-100 px-2.5 py-0.5 rounded-lg">
+                                            <i class="ph-bold ph-clock text-amber-600"></i>
+                                            ${ev.start}${ev.end ? ` - ${ev.end}` : ''}
+                                        </span>
+                                        ${ev.isMilestone ? `<span class="text-[10px] font-bold bg-violet-100 text-violet-700 px-2 py-0.5 rounded-lg">🌟 Evento Speciale</span>` : ''}
+                                    </div>
+                                    <h4 class="font-display font-bold text-base sm:text-lg text-slate-900 mt-1 group-hover:text-amber-600 transition-colors">
+                                        ${escapeHtml(ev.title)}
+                                    </h4>
+                                    ${ev.notes ? `<p class="text-xs text-slate-500 mt-0.5 flex items-center gap-1"><i class="ph-fill ph-map-pin text-slate-400"></i> ${escapeHtml(ev.notes)}</p>` : ''}
+                                </div>
+                            </div>
+
+                            <!-- Avatar stack & Bottone Modifica -->
+                            <div class="flex flex-col items-end gap-1.5 shrink-0">
+                                ${renderAvatarsStack(ev.members)}
+                                <div class="flex items-center gap-1">
+                                    <button onclick="sendSingleEventToTelegram('${ev.id}')" class="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 hover:bg-sky-100 flex items-center justify-center text-xs" title="Invia promemoria su Telegram">
+                                        <i class="ph-fill ph-paper-plane-tilt"></i>
+                                    </button>
+                                    <button onclick="openEventModal('${ev.id}')" class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center text-xs" title="Modifica impegno">
+                                        <i class="ph-bold ph-pencil-simple"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Riga Logistica Taxi (Andata / Ritorno) -->
+                        ${hasTaxi ? `
+                            <div class="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 text-xs">
+                                ${ev.driverTo ? `
+                                    <span class="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-xl">
+                                        <span>🚗 Porta:</span>
+                                        ${renderDriverBadgeContent(ev.driverTo)}
+                                    </span>
+                                ` : ''}
+                                ${ev.driverFrom ? `
+                                    <span class="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-xl">
+                                        <span>🏡 Riprende:</span>
+                                        ${renderDriverBadgeContent(ev.driverFrom)}
+                                    </span>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+
+                        <!-- Mini-Checklist Interattiva sulla Card -->
+                        ${hasChecklist ? `
+                            <div class="bg-slate-50/90 rounded-2xl p-2.5 border border-slate-200/70 space-y-1.5">
+                                <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+                                    <span>Promemoria / Cose da fare</span>
+                                    <span>${ev.checklist.filter(i => i.done).length}/${ev.checklist.length} completati</span>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${ev.checklist.map((item, idx) => `
+                                        <button onclick="toggleChecklistItem('${ev.id}', ${idx})" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border transition ${
+                                            item.done
+                                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700 line-through opacity-75'
+                                                : 'bg-white border-slate-300 text-slate-700 hover:border-amber-400'
+                                        }">
+                                            <i class="ph-fill ${item.done ? 'ph-check-circle text-emerald-500' : 'ph-circle text-slate-300'} text-sm"></i>
+                                            <span>${escapeHtml(item.text)}</span>
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderAvatarsStack(members) {
+            return `
+                <div class="flex items-center -space-x-2">
+                    ${members.map(mId => {
+                        const m = FAMILY_MEMBERS[mId] || FAMILY_MEMBERS.tutti;
+                        return `<span class="w-8 h-8 rounded-full ${m.bgLight} border-2 border-white overflow-hidden flex items-center justify-center shadow-sm" title="${m.name}">${m.avatar}</span>`;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        function getEventGradient(members) {
+            if (!members || members.length === 0) return '#8B5CF6';
+            if (members.length === 1) return (FAMILY_MEMBERS[members[0]] || FAMILY_MEMBERS.tutti).color;
+            const cols = members.map(m => (FAMILY_MEMBERS[m] || FAMILY_MEMBERS.tutti).color);
+            return `linear-gradient(to bottom, ${cols.join(', ')})`;
+        }
+
+        // E. Vista Calendario Mensile a Pallini
+        function renderMonthView() {
+            const year = currentMonthCursor.getFullYear();
+            const month = currentMonthCursor.getMonth();
+
+            const monthTitle = currentMonthCursor.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+            document.getElementById('monthGridTitle').textContent = monthTitle;
+
+            const firstDayOfMonth = new Date(year, month, 1);
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            // Lunedì = 0 ... Domenica = 6
+            let startOffset = firstDayOfMonth.getDay() - 1;
+            if (startOffset < 0) startOffset = 6;
+
+            const gridEl = document.getElementById('monthDaysGrid');
+            const today = getTodayISO();
+            let cellsHTML = '';
+
+            for (let i = 0; i < startOffset; i++) {
+                cellsHTML += `<div class="h-14 sm:h-16 rounded-2xl bg-slate-100/40"></div>`;
+            }
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const dayEvents = appData.events.filter(ev => {
+                    if (ev.date !== dateStr) return false;
+                    if (activeFilterMember === 'all') return true;
+                    return ev.members.includes(activeFilterMember) || ev.members.includes('tutti');
+                });
+
+                const isToday = dateStr === today;
+                const isSelected = dateStr === selectedMonthDateStr;
+
+                cellsHTML += `
+                    <button onclick="selectMonthDay('${dateStr}')" class="h-14 sm:h-16 rounded-2xl p-1.5 flex flex-col items-center justify-between border-2 transition ${
+                        isSelected
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-md scale-[1.03]'
+                            : isToday
+                            ? 'bg-amber-100/90 border-amber-400 text-slate-900 font-bold'
+                            : 'bg-white hover:bg-amber-50/50 border-slate-100 text-slate-700'
+                    }">
+                        <span class="text-xs font-bold">${d}</span>
+                        <div class="flex flex-wrap items-center justify-center gap-0.5 max-w-full">
+                            ${dayEvents.slice(0, 4).map(ev => {
+                                const m = FAMILY_MEMBERS[ev.members[0]] || FAMILY_MEMBERS.tutti;
+                                return `<span class="text-[11px] leading-none" title="${escapeHtml(ev.title)}">${ev.icon}</span>`;
+                            }).join('')}
+                        </div>
+                    </button>
+                `;
+            }
+
+            gridEl.innerHTML = cellsHTML;
+            renderSelectedMonthDayDetails();
+        }
+
+        function selectMonthDay(dateStr) {
+            selectedMonthDateStr = dateStr;
+            renderMonthView();
+        }
+
+        function changeMonth(delta) {
+            currentMonthCursor = new Date(currentMonthCursor.getFullYear(), currentMonthCursor.getMonth() + delta, 1);
+            renderMonthView();
+        }
+
+        function goToTodayMonth() {
+            const now = new Date();
+            currentMonthCursor = new Date(now.getFullYear(), now.getMonth(), 1);
+            selectedMonthDateStr = getTodayISO();
+            renderMonthView();
+        }
+
+        function renderSelectedMonthDayDetails() {
+            const container = document.getElementById('selectedMonthDayDetails');
+            const dayEvents = appData.events
+                .filter(e => e.date === selectedMonthDateStr)
+                .sort((a, b) => a.start.localeCompare(b.start));
+
+            container.innerHTML = `
+                <div class="flex items-center justify-between px-1">
+                    <h4 class="font-display font-bold text-base text-slate-800 capitalize">
+                        📅 Impegni di ${formatFullDayIT(selectedMonthDateStr)}
+                    </h4>
+                    <button onclick="openEventModal(null, '${selectedMonthDateStr}')" class="tactile-btn bg-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-xl">
+                        + Aggiungi in questo giorno
+                    </button>
+                </div>
+                ${dayEvents.length === 0 ? `
+                    <div class="tactile-card rounded-3xl p-4 text-center text-xs text-slate-400">
+                        Nessun impegno registrato per questo giorno.
+                    </div>
+                ` : `
+                    <div class="space-y-2.5">
+                        ${dayEvents.map(ev => renderEventCardHTML(ev)).join('')}
+                    </div>
+                `}
+            `;
+        }
+
+        function switchView(viewName) {
+            currentView = viewName;
+            const tlContainer = document.getElementById('timelineViewContainer');
+            const moContainer = document.getElementById('monthViewContainer');
+            const tlBtn = document.getElementById('tabTimelineBtn');
+            const moBtn = document.getElementById('tabMonthBtn');
+
+            if (viewName === 'timeline') {
+                tlContainer.classList.remove('hidden');
+                moContainer.classList.add('hidden');
+                tlBtn.className = "flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm";
+                moBtn.className = "flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+            } else {
+                tlContainer.classList.add('hidden');
+                moContainer.classList.remove('hidden');
+                moBtn.className = "flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all bg-white text-slate-900 shadow-sm";
+                tlBtn.className = "flex-1 py-2 px-3 rounded-xl font-display font-semibold text-sm flex items-center justify-center gap-2 transition-all text-slate-600 hover:text-slate-900";
+            }
+            renderAll();
+        }
+
+        // --- 7. INTERAZIONI DIRETTE SULLE CARD (CHECKLIST & CENA) ---
+        function toggleChecklistItem(eventId, itemIdx) {
+            const ev = appData.events.find(e => e.id === eventId);
+            if (!ev || !ev.checklist || !ev.checklist[itemIdx]) return;
+            ev.checklist[itemIdx].done = !ev.checklist[itemIdx].done;
+            saveDataAndSync();
+            renderAll();
+        }
+
+        function saveDinnerNote(dateStr, noteText) {
+            if (!appData.dinners) appData.dinners = {};
+            appData.dinners[dateStr] = noteText.trim();
+            saveDataAndSync();
+            showToast('🍽️ Menu della sera aggiornato!');
+        }
+
+        // --- 8. MODALE CREAZIONE / MODIFICA EVENTO E TEMPLATE RAPIDI ---
+        function openTemplateQuickAdd(templateIndex) {
+            const tpl = QUICK_TEMPLATES[templateIndex];
+            openEventModal(null, getTodayISO());
+
+            document.getElementById('evtIcon').value = tpl.icon;
+            document.getElementById('modalEmojiPreview').textContent = tpl.icon;
+            document.getElementById('evtTitle').value = tpl.title;
+            document.getElementById('evtStart').value = tpl.start;
+            document.getElementById('evtEnd').value = tpl.end;
+            document.getElementById('evtDriverTo').value = tpl.driverTo || '';
+            document.getElementById('evtDriverFrom').value = tpl.driverFrom || '';
+
+            modalSelectedMembers = new Set(tpl.members);
+            renderModalMemberButtons();
+
+            modalChecklistDraft = (tpl.checklist || []).map(t => ({ text: t, done: false }));
+            renderModalChecklistDraft();
+        }
+
+        function openEventModal(eventId = null, defaultDate = null) {
+            const modal = document.getElementById('eventModal');
+            const deleteBtn = document.getElementById('deleteEventBtn');
+            const headerEl = document.getElementById('modalTitleHeader');
+
+            if (eventId) {
+                const ev = appData.events.find(e => e.id === eventId);
+                if (!ev) return;
+                headerEl.textContent = 'Modifica Impegno';
+                deleteBtn.classList.remove('hidden');
+
+                document.getElementById('evtId').value = ev.id;
+                document.getElementById('evtIcon').value = ev.icon || '📅';
+                document.getElementById('modalEmojiPreview').textContent = ev.icon || '📅';
+                document.getElementById('evtTitle').value = ev.title;
+                document.getElementById('evtDate').value = ev.date;
+                document.getElementById('evtStart').value = ev.start || '17:00';
+                document.getElementById('evtEnd').value = ev.end || '18:00';
+                document.getElementById('evtDriverTo').value = ev.driverTo || '';
+                document.getElementById('evtDriverFrom').value = ev.driverFrom || '';
+                document.getElementById('evtNotes').value = ev.notes || '';
+                document.getElementById('evtRepeatWeeks').value = '1';
+                document.getElementById('evtIsMilestone').checked = !!ev.isMilestone;
+
+                modalSelectedMembers = new Set(ev.members || ['tutti']);
+                modalChecklistDraft = JSON.parse(JSON.stringify(ev.checklist || []));
+            } else {
+                headerEl.textContent = 'Nuovo Impegno';
+                deleteBtn.classList.add('hidden');
+
+                document.getElementById('evtId').value = '';
+                document.getElementById('evtIcon').value = '📅';
+                document.getElementById('modalEmojiPreview').textContent = '📅';
+                document.getElementById('evtTitle').value = '';
+                document.getElementById('evtDate').value = defaultDate || getTodayISO();
+                document.getElementById('evtStart').value = '17:00';
+                document.getElementById('evtEnd').value = '18:30';
+                document.getElementById('evtDriverTo').value = '';
+                document.getElementById('evtDriverFrom').value = '';
+                document.getElementById('evtNotes').value = '';
+                document.getElementById('evtRepeatWeeks').value = '1';
+                document.getElementById('evtIsMilestone').checked = false;
+
+                modalSelectedMembers = new Set(activeFilterMember !== 'all' ? [activeFilterMember] : ['tutti']);
+                modalChecklistDraft = [];
+            }
+
+            renderModalMemberButtons();
+            renderModalChecklistDraft();
+            modal.classList.remove('hidden');
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').classList.add('hidden');
+        }
+
+        function renderModalMemberButtons() {
+            const container = document.getElementById('modalMembersSelector');
+            const membersList = [FAMILY_MEMBERS.luigi, FAMILY_MEMBERS.vale, FAMILY_MEMBERS.leo, FAMILY_MEMBERS.kiki, FAMILY_MEMBERS.tutti];
+
+            container.innerHTML = membersList.map(m => {
+                const active = modalSelectedMembers.has(m.id);
+                return `
+                    <button type="button" onclick="toggleModalMember('${m.id}')" class="tactile-btn py-2 px-1 rounded-2xl flex flex-col items-center justify-center transition ${
+                        active
+                            ? 'bg-slate-900 text-white ring-2 ring-amber-400'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }">
+                        <span class="w-9 h-9 rounded-full overflow-hidden border-2 ${active ? 'border-amber-400' : 'border-white'} shadow-sm flex items-center justify-center">${m.avatar}</span>
+                        <span class="text-[11px] font-bold mt-1">${m.name}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function toggleModalMember(memberId) {
+            if (modalSelectedMembers.has(memberId)) {
+                if (modalSelectedMembers.size > 1) modalSelectedMembers.delete(memberId);
+            } else {
+                modalSelectedMembers.add(memberId);
+            }
+            renderModalMemberButtons();
+        }
+
+        function renderModalChecklistDraft() {
+            const box = document.getElementById('modalChecklistItems');
+            if (modalChecklistDraft.length === 0) {
+                box.innerHTML = `<p class="text-[11px] text-slate-400 italic">Nessuna spunta aggiunta.</p>`;
+                return;
+            }
+            box.innerHTML = modalChecklistDraft.map((item, idx) => `
+                <div class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 text-xs">
+                    <span class="font-medium text-slate-700">• ${escapeHtml(item.text)}</span>
+                    <button type="button" onclick="removeModalChecklistItem(${idx})" class="text-rose-500 hover:text-rose-700 font-bold">
+                        <i class="ph-bold ph-x"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function addModalChecklistItem() {
+            const inp = document.getElementById('newChecklistInput');
+            const val = inp.value.trim();
+            if (!val) return;
+            modalChecklistDraft.push({ text: val, done: false });
+            inp.value = '';
+            renderModalChecklistDraft();
+        }
+
+        function removeModalChecklistItem(idx) {
+            modalChecklistDraft.splice(idx, 1);
+            renderModalChecklistDraft();
+        }
+
+        function saveEventFromForm(e) {
+            e.preventDefault();
+            const existingId = document.getElementById('evtId').value;
+            const icon = document.getElementById('evtIcon').value;
+            const title = document.getElementById('evtTitle').value.trim();
+            const baseDate = document.getElementById('evtDate').value;
+            const start = document.getElementById('evtStart').value;
+            const end = document.getElementById('evtEnd').value;
+            const driverTo = document.getElementById('evtDriverTo').value;
+            const driverFrom = document.getElementById('evtDriverFrom').value;
+            const notes = document.getElementById('evtNotes').value.trim();
+            const repeatWeeks = parseInt(document.getElementById('evtRepeatWeeks').value, 10) || 1;
+            const isMilestone = document.getElementById('evtIsMilestone').checked;
+            const notifyTelegram = document.getElementById('evtNotifyTelegram').checked;
+
+            const membersArr = Array.from(modalSelectedMembers);
+
+            let savedEventObj = null;
+
+            if (existingId) {
+                const idx = appData.events.findIndex(ev => ev.id === existingId);
+                if (idx !== -1) {
+                    appData.events[idx] = {
+                        ...appData.events[idx],
+                        icon,
+                        title,
+                        date: baseDate,
+                        start,
+                        end,
+                        members: membersArr,
+                        driverTo,
+                        driverFrom,
+                        notes,
+                        isMilestone,
+                        checklist: modalChecklistDraft
+                    };
+                    savedEventObj = appData.events[idx];
+                }
+            } else {
+                for (let w = 0; w < repeatWeeks; w++) {
+                    const eventDate = addDaysISO(baseDate, w * 7);
+                    const newEv = {
+                        id: 'evt_' + Date.now() + '_' + w,
+                        icon,
+                        title: repeatWeeks > 1 ? `${title}` : title,
+                        date: eventDate,
+                        start,
+                        end,
+                        members: membersArr,
+                        driverTo,
+                        driverFrom,
+                        notes,
+                        isMilestone: w === 0 ? isMilestone : false,
+                        checklist: JSON.parse(JSON.stringify(modalChecklistDraft))
+                    };
+                    appData.events.push(newEv);
+                    if (w === 0) savedEventObj = newEv;
+                }
+            }
+
+            closeEventModal();
+            saveDataAndSync();
+            renderAll();
+            showToast(`✅ "${title}" salvato in calendario!`);
+
+            if (notifyTelegram && savedEventObj) {
+                const actionLabel = existingId ? 'ha aggiornato' : 'ha aggiunto';
+                const msgHtml = formatTelegramEventMessage(savedEventObj, actionLabel);
+                document.getElementById('telegramPreviewBox').innerHTML = msgHtml.replace(/\n/g, '<br>');
+                dispatchTelegramMessage(msgHtml, false);
+            }
+        }
+
+        function deleteCurrentEvent() {
+            const id = document.getElementById('evtId').value;
+            if (!id) return;
+            appData.events = appData.events.filter(e => e.id !== id);
+            closeEventModal();
+            saveDataAndSync();
+            renderAll();
+            showToast('🗑️ Impegno rimosso dal calendario');
+        }
+
+        // --- 9. PERSISTENZA LOCALE + DROPBOX CLOUD SYNC ---
+        function loadLocalData() {
+            try {
+                const raw = localStorage.getItem(STORAGE_KEY_DB);
+                if (raw) {
+                    appData = JSON.parse(raw);
+                } else {
+                    appData = createDefaultSampleData();
+                    localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(appData));
+                }
+            } catch (e) {
+                appData = createDefaultSampleData();
+            }
+        }
+
+        function saveDataAndSync() {
+            appData.last_updated = new Date().toISOString();
+            localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(appData));
+            syncToDropbox(false);
+        }
+
+        function getCloudConfig() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY_CFG)) || {
+                    dropboxToken: '',
+                    telegramToken: '',
+                    telegramChatId: ''
+                };
+            } catch {
+                return { dropboxToken: '', telegramToken: '', telegramChatId: '' };
+            }
+        }
+
+        function loadCloudConfigToInputs() {
+            const cfg = getCloudConfig();
+            document.getElementById('cfgDropboxToken').value = cfg.dropboxToken || '';
+            document.getElementById('cfgTelegramToken').value = cfg.telegramToken || '';
+            document.getElementById('cfgTelegramChatId').value = cfg.telegramChatId || '';
+            updateStatusIndicators();
+        }
+
+        function saveCloudConfig() {
+            const cfg = {
+                dropboxToken: document.getElementById('cfgDropboxToken').value.trim(),
+                telegramToken: document.getElementById('cfgTelegramToken').value.trim(),
+                telegramChatId: document.getElementById('cfgTelegramChatId').value.trim()
+            };
+            localStorage.setItem(STORAGE_KEY_CFG, JSON.stringify(cfg));
+            updateStatusIndicators();
+            showToast('⚙️ Configurazione Cloud salvata');
+        }
+
+        function updateStatusIndicators() {
+            const cfg = getCloudConfig();
+            const badgeText = document.getElementById('syncStatusText');
+            const tgDot = document.getElementById('telegramConfiguredDot');
+
+            if (cfg.dropboxToken) {
+                badgeText.textContent = 'Dropbox Attivo';
+            } else {
+                badgeText.textContent = 'Memoria Locale';
+            }
+
+            if (cfg.telegramToken && cfg.telegramChatId) {
+                tgDot.classList.remove('hidden');
+            } else {
+                tgDot.classList.add('hidden');
+            }
+        }
+
+        async function syncFromDropbox(showFeedback = true) {
+            const cfg = getCloudConfig();
+            if (!cfg.dropboxToken) {
+                if (showFeedback) openSettingsModal();
+                return;
+            }
+
+            const badgeText = document.getElementById('syncStatusText');
+            badgeText.textContent = 'Sync...';
+
+            try {
+                const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${cfg.dropboxToken}`,
+                        'Dropbox-API-Arg': JSON.stringify({ path: '/calendar_barra.json' })
+                    }
+                });
+
+                if (res.ok) {
+                    const remoteData = await res.json();
+                    if (remoteData && Array.isArray(remoteData.events)) {
+                        appData = remoteData;
+                        localStorage.setItem(STORAGE_KEY_DB, JSON.stringify(appData));
+                        renderAll();
+                        badgeText.textContent = 'Dropbox OK';
+                        if (showFeedback) showToast('☁️ Calendario scaricato da Dropbox!');
+                    }
+                } else if (res.status === 409) {
+                    // Il file non esiste ancora su Dropbox: creiamolo subito!
+                    await syncToDropbox(showFeedback);
+                } else {
+                    badgeText.textContent = 'Errore Sync';
+                    if (showFeedback) showToast('⚠️ Controlla il Token Dropbox nelle impostazioni');
+                }
+            } catch (err) {
+                badgeText.textContent = 'Offline';
+                if (showFeedback) showToast('⚠️ Connessione Dropbox non riuscita');
+            }
+        }
+
+        async function syncToDropbox(showFeedback = false) {
+            const cfg = getCloudConfig();
+            if (!cfg.dropboxToken) return;
+
+            const badgeText = document.getElementById('syncStatusText');
+            badgeText.textContent = 'Salvataggio...';
+
+            try {
+                const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${cfg.dropboxToken}`,
+                        'Content-Type': 'application/octet-stream',
+                        'Dropbox-API-Arg': JSON.stringify({
+                            path: '/calendar_barra.json',
+                            mode: 'overwrite',
+                            autorename: false,
+                            mute: true
+                        })
+                    },
+                    body: JSON.stringify(appData, null, 2)
+                });
+
+                if (res.ok) {
+                    badgeText.textContent = 'Dropbox OK';
+                    if (showFeedback) showToast('☁️ Salvato su Dropbox (/calendar_barra.json)!');
+                } else {
+                    badgeText.textContent = 'Errore Upload';
+                    if (showFeedback) showToast('⚠️ Errore durante upload su Dropbox');
+                }
+            } catch (e) {
+                badgeText.textContent = 'Locale';
+            }
+        }
+
+        // --- 10. INTEGRAZIONE BOT TELEGRAM ("IL MAGGIORDOMO DI CASA") ---
+        function formatTelegramEventMessage(ev, actionVerb = 'ha aggiunto') {
+            const author = FAMILY_MEMBERS[activeAuthor] || FAMILY_MEMBERS.luigi;
+            const participants = (ev.members || []).map(id => {
+                const m = FAMILY_MEMBERS[id] || FAMILY_MEMBERS.tutti;
+                return `${m.tgEmoji} ${m.name}`;
+            }).join(', ');
+
+            let lines = [
+                `🔔 <b>${author.tgEmoji} ${author.name} ${actionVerb} un impegno:</b>`,
+                ``,
+                `${ev.icon} <b>${escapeHtml(ev.title)}</b>`,
+                `📅 ${formatFullDayIT(ev.date)} • 🕒 <b>${ev.start}${ev.end ? ' - ' + ev.end : ''}</b>`,
+                `👥 <i>Per:</i> ${participants}`
+            ];
+
+            if (ev.driverTo || ev.driverFrom) {
+                const toStr = ev.driverTo ? `🚗 Porta: <b>${DRIVER_LABELS[ev.driverTo] || ev.driverTo}</b>` : '';
+                const fromStr = ev.driverFrom ? `🏡 Riprende: <b>${DRIVER_LABELS[ev.driverFrom] || ev.driverFrom}</b>` : '';
+                lines.push(`${[toStr, fromStr].filter(Boolean).join(' | ')}`);
+            }
+
+            if (ev.notes) {
+                lines.push(`📌 <i>Note:</i> ${escapeHtml(ev.notes)}`);
+            }
+
+            if (ev.checklist && ev.checklist.length > 0) {
+                const items = ev.checklist.map(c => `${c.done ? '✅' : '▫️'} ${escapeHtml(c.text)}`).join(', ');
+                lines.push(`🎒 <i>Da ricordare:</i> ${items}`);
+            }
+
+            return lines.join('\n');
+        }
+
+        async function dispatchTelegramMessage(htmlText, requireFeedback = true) {
+            const cfg = getCloudConfig();
+            if (!cfg.telegramToken || !cfg.telegramChatId) {
+                if (requireFeedback) {
+                    showToast('📲 Configura prima Bot Token e Chat ID nelle Impostazioni ⚙️');
+                    openSettingsModal();
+                }
+                return;
+            }
+
+            try {
+                const url = `https://api.telegram.org/bot${cfg.telegramToken}/sendMessage`;
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: cfg.telegramChatId,
+                        text: htmlText,
+                        parse_mode: 'HTML'
+                    })
+                });
+
+                if (res.ok) {
+                    showToast('📲 Notifica inviata sul gruppo Telegram di famiglia!');
+                } else {
+                    if (requireFeedback) showToast('⚠️ Telegram ha rifiutato il messaggio (verifica Token/Chat ID)');
+                }
+            } catch (e) {
+                if (requireFeedback) showToast('⚠️ Errore di rete verso Telegram API');
+            }
+        }
+
+        function sendSingleEventToTelegram(eventId) {
+            const ev = appData.events.find(e => e.id === eventId);
+            if (!ev) return;
+            const htmlMsg = formatTelegramEventMessage(ev, 'ricorda');
+            document.getElementById('telegramPreviewBox').innerHTML = htmlMsg.replace(/\n/g, '<br>');
+            dispatchTelegramMessage(htmlMsg, true);
+        }
+
+        function sendMorningBriefingToTelegram() {
+            const today = getTodayISO();
+            const todaysEvents = appData.events
+                .filter(e => e.date === today)
+                .sort((a, b) => a.start.localeCompare(b.start));
+
+            const dinner = appData.dinners?.[today];
+
+            let lines = [
+                `☀️ <b>Buongiorno Famiglia Barra!</b>`,
+                `📅 Programma di oggi (<b>${formatFullDayIT(today)}</b>):`,
+                ``
+            ];
+
+            if (todaysEvents.length === 0) {
+                lines.push(`🎈 <i>Nessun impegno in calendario per oggi!</i>`);
+            } else {
+                todaysEvents.forEach(ev => {
+                    const who = ev.members.map(m => (FAMILY_MEMBERS[m] || FAMILY_MEMBERS.tutti).tgEmoji).join('');
+                    const taxi = ev.driverTo ? ` <i>(🚗 ${DRIVER_LABELS[ev.driverTo]})</i>` : '';
+                    lines.push(`• <b>${ev.start}</b> — ${ev.icon} <b>${escapeHtml(ev.title)}</b> ${who}${taxi}`);
+                });
+            }
+
+            if (dinner) {
+                lines.push(``);
+                lines.push(`🍽️ <b>Stasera a cena:</b> ${escapeHtml(dinner)}`);
+            }
+
+            const htmlMsg = lines.join('\n');
+            document.getElementById('telegramPreviewBox').innerHTML = htmlMsg.replace(/\n/g, '<br>');
+            dispatchTelegramMessage(htmlMsg, true);
+        }
+
+        function testTelegramNotification() {
+            const author = FAMILY_MEMBERS[activeAuthor] || FAMILY_MEMBERS.luigi;
+            const sampleMsg = `👋 <b>Ciao Famiglia Barra!</b>\nIl Maggiordomo del Calendario è collegato correttamente (test inviato da ${author.tgEmoji} ${author.name}).`;
+            dispatchTelegramMessage(sampleMsg, true);
+        }
+
+        // --- 11. IMPOSTAZIONI, EXPORT E UTILITÀ ---
+        function openSettingsModal() {
+            loadCloudConfigToInputs();
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function exportJsonBackup() {
+            const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `calendar_barra_${getTodayISO()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📦 File JSON esportato!');
+        }
+
+        function resetDemoData() {
+            appData = createDefaultSampleData();
+            saveDataAndSync();
+            renderAll();
+            closeSettingsModal();
+            showToast('✨ Eventi di esempio ripristinati!');
+        }
+
+        function calcDaysDiff(fromIso, toIso) {
+            const [y1, m1, d1] = fromIso.split('-').map(Number);
+            const [y2, m2, d2] = toIso.split('-').map(Number);
+            const dt1 = new Date(y1, m1 - 1, d1);
+            const dt2 = new Date(y2, m2 - 1, d2);
+            return Math.round((dt2 - dt1) / (1000 * 60 * 60 * 24));
+        }
+
+        function formatShortDateIT(isoDate) {
+            const [y, m, d] = isoDate.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            return dt.toLocaleDateString('it-IT', { day: 'numeric', month: 'short' });
+        }
+
+        function formatFullDayIT(isoDate) {
+            const [y, m, d] = isoDate.split('-').map(Number);
+            const dt = new Date(y, m - 1, d);
+            return dt.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = "bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 animate-pop";
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.25s ease';
+                setTimeout(() => toast.remove(), 250);
+            }, 2800);
+        }
+    </script>
+</body>
+</html>
