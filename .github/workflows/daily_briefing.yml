@@ -1,0 +1,28 @@
+name: Buongiorno Casa Barra (07:30)
+
+on:
+  schedule:
+    # Gira ogni mattina alle 06:30 UTC (07:30 ora solare italiana / 08:30 ora legale)
+    - cron: '30 6 * * *'
+  workflow_dispatch: # Permette di testarlo con 1 click manuale da GitHub Actions
+
+jobs:
+  send-briefing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Invia Riepilogo Mattutino su Telegram
+        env:
+          DBX_APP_KEY: ${{ secrets.DBX_APP_KEY }}
+          DBX_APP_SECRET: ${{ secrets.DBX_APP_SECRET }}
+          DBX_REFRESH_TOKEN: ${{ secrets.DBX_REFRESH_TOKEN }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
+          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
+        run: python morning_briefing.py
