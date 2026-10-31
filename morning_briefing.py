@@ -31,22 +31,6 @@ DRIVERS = {
 }
 
 
-def check_secrets():
-  missing = []
-  for name, val in [
-      ("DBX_APP_KEY", DBX_APP_KEY),
-      ("DBX_APP_SECRET", DBX_APP_SECRET),
-      ("DBX_REFRESH_TOKEN", DBX_REFRESH_TOKEN),
-      ("TG_BOT_TOKEN", TG_BOT_TOKEN),
-      ("TG_CHAT_ID", TG_CHAT_ID),
-  ]:
-    if not val:
-      missing.append(name)
-  if missing:
-    print(f"❌ ERRORE: Mancano questi Secrets su GitHub: {', '.join(missing)}")
-    sys.exit(1)
-
-
 def get_dropbox_access_token():
   data = urllib.parse.urlencode({
       "grant_type": "refresh_token",
@@ -80,10 +64,6 @@ def download_calendar_db(token):
   except urllib.error.HTTPError as e:
     body = e.read().decode("utf-8", errors="ignore")
     print(f"❌ Impossibile scaricare {DBX_PATH} da Dropbox ({e.code}): {body}")
-    print(
-        "💡 Suggerimento: Apri la Web App e clicca su 'Salva su Dropbox' per"
-        " creare il file la prima volta."
-    )
     sys.exit(1)
 
 
@@ -110,22 +90,28 @@ def send_telegram(text):
 
 
 def main():
-  check_secrets()
+  # Orario di Milano (Europe/Rome)
   now_rome = datetime.now(ZoneInfo("Europe/Rome"))
-  today_iso = now_rome.strftime("%Y-%m-%d")
-  in_7_days_iso = (now_rome + timedelta(days=7)).strftime("%Y-%m-%d")
+  current_hour = now_rome.hour
+
+  # Se sono le 20:00 (o comunque la sera dopo le 18), il target è il GIORNO DOPO
+  is_evening_report = current_hour >= 18
+  target_date = now_rome + timedelta(days=1) if is_evening_report else now_rome
+  target_iso = target_date.strftime("%Y-%m-%d")
+  in_7_days_iso = (target_date + timedelta(days=7)).strftime("%Y-%m-%d")
 
   token = get_dropbox_access_token()
   db = download_calendar_db(token)
   events = db.get("events", [])
   dinners = db.get("dinners", {})
 
-  todays_events = sorted(
-      [e for e in events if e.get("date") == today_iso],
+  target_events = sorted(
+      [e for e in events if e.get("date") == target_iso],
       key=lambda x: x.get("start") or "99:99",
   )
-  dinner_today = dinners.get(today_iso)
+  dinner_target = dinners.get(target_iso)
 
+  # Controllo serie in scadenza
   series_map = {}
   for e in events:
     sid = e.get("seriesId")
@@ -138,23 +124,29 @@ def main():
     if len(sevents) >= 2:
       last_date = sevents[-1].get("date")
       penultimate_date = sevents[-2].get("date")
-      if penultimate_date == today_iso or last_date == in_7_days_iso:
+      if penultimate_date == target_iso or last_date == in_7_days_iso:
         expiring_alerts.append(
             (sevents[-1].get("icon", "🔁"), sevents[-1].get("title", ""), last_date)
         )
 
-  if not todays_events and not dinner_today and not expiring_alerts:
-    print("ℹ️ Nessun impegno oggi, nessuna notifica inviata.")
+  if not target_events and not dinner_target and not expiring_alerts:
+    print(
+        f"ℹ️ Nessun impegno per il {target_iso} ({'sera' if is_evening_report else 'mattina'}), nessuna notifica."
+    )
     return
 
-  msg = (
-      "☀️ <b>Buongiorno Famiglia Barra!</b>\nProgramma di oggi"
-      f" (<b>{today_iso}</b>):\n\n"
+  title_greeting = (
+      f"🌙 <b>Programma per Domani ({target_iso}):</b>"
+      if is_evening_report
+      else f"☀️ <b>Buongiorno Famiglia Barra! Programma di oggi ({target_iso}):</b>"
   )
-  if not todays_events:
-    msg += "🎉 <i>Nessun impegno in calendario per oggi!</i>\n\n"
+
+  msg = f"{title_greeting}\n\n"
+
+  if not target_events:
+    msg += "🎉 <i>Nessun impegno in calendario!</i>\n\n"
   else:
-    for ev in todays_events:
+    for ev in target_events:
       m_str = ", ".join(MEMBERS.get(m, m) for m in ev.get("members", []))
       start_t = ev.get("start") or "Tutto il giorno"
       msg += (
@@ -175,8 +167,8 @@ def main():
         msg += f"\n   └ 📋 Da ricordare: <i>{', '.join(todos)}</i>"
       msg += "\n\n"
 
-  if dinner_today:
-    msg += f"🍽️ <b>Stasera a cena:</b> {dinner_today}\n"
+  if dinner_target:
+    msg += f"🍽️ <b>A cena:</b> {dinner_target}\n"
 
   if expiring_alerts:
     msg += "\n⚠️ <b>Avviso Serie in Chiusura (manca 1 settimana!):</b>\n"
