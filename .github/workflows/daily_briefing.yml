@@ -1,10 +1,13 @@
-name: Buongiorno Casa Barra (07:30)
+name: Briefing Famiglia Casa Barra
 
 on:
   schedule:
-    # Gira ogni mattina alle 06:30 UTC (07:30 ora solare italiana / 08:30 ora legale)
-    - cron: '30 6 * * *'
-  workflow_dispatch: # Permette di testarlo con 1 click manuale da GitHub Actions
+    # 1. Ogni mattina alle 07:30 (Lun-Ven) o 09:00 (Sab-Dom) ora italiana (gestito con UTC considerando solare/legale)
+    - cron: '30 6 * * 1-5'
+    - cron: '0 8 * * 0,6'
+    # 2. Ogni sera alle 20:00 ora italiana (19:00 UTC in inverno / 18:00 UTC in estate, impostiamo le 18:00 UTC o facciamo scattare lo script che decide)
+    - cron: '0 18 * * *'
+  workflow_dispatch: # Per il test manuale con 1 click
 
 jobs:
   send-briefing:
@@ -18,7 +21,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Invia Riepilogo Mattutino su Telegram
+      - name: Invia Briefing su Telegram
         env:
           DBX_APP_KEY: ${{ secrets.DBX_APP_KEY }}
           DBX_APP_SECRET: ${{ secrets.DBX_APP_SECRET }}
